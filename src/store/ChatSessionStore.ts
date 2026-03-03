@@ -22,6 +22,7 @@ export interface SessionMetaData {
   messages: MessageType.Any[];
   completionSettings: CompletionParams;
   activePalId?: string;
+  pinned: boolean;
   settingsSource: 'pal' | 'custom'; // Explicit choice: use pal settings or custom settings
   messagesLoaded?: boolean; // Track if messages are loaded for lazy loading
 }
@@ -177,6 +178,7 @@ class ChatSessionStore {
           messages,
           completionSettings,
           activePalId: session.activePalId,
+          pinned: session.pinned ?? false,
           settingsSource: 'pal', // Default to pal settings for existing sessions
           messagesLoaded: false, // Mark as not loaded for lazy loading
         });
@@ -417,6 +419,7 @@ class ChatSessionStore {
         date: newSession.date,
         messages,
         completionSettings: settings,
+        pinned: false,
         settingsSource: this.newChatSettingsSource, // Use the stored settings source choice
         messagesLoaded: true, // Mark as loaded since we have the messages
       };
@@ -648,8 +651,29 @@ class ChatSessionStore {
     }
   }
 
+  get pinnedSessions(): SessionMetaData[] {
+    return this.sessions.filter(s => s.pinned);
+  }
+
+  async togglePinSession(sessionId: string): Promise<void> {
+    try {
+      const newPinned =
+        await chatSessionRepository.togglePinSession(sessionId);
+      runInAction(() => {
+        const session = this.sessions.find(s => s.id === sessionId);
+        if (session) {
+          session.pinned = newPinned;
+        }
+      });
+    } catch (error) {
+      console.error('Failed to toggle pin session:', error);
+    }
+  }
+
   get groupedSessions(): SessionGroup {
-    const groups: SessionGroup = this.sessions.reduce(
+    const groups: SessionGroup = this.sessions
+      .filter(s => !s.pinned)
+      .reduce(
       (acc: SessionGroup, session) => {
         const date = new Date(session.date);
         let dateKey: string = format(date, 'MMMM dd, yyyy');

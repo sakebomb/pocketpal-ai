@@ -6,6 +6,7 @@ export const sessionFixtures = [
     title: 'Session 1',
     date: '2024-10-12',
     messages: [{id: 'msg-1', text: 'Hello!', type: 'text'} as MessageType.Text],
+    pinned: false,
     messagesLoaded: true,
   },
   {
@@ -15,6 +16,7 @@ export const sessionFixtures = [
     messages: [
       {id: 'msg-2', text: 'Hey there!', type: 'text'} as MessageType.Text,
     ],
+    pinned: false,
     messagesLoaded: true,
   },
 ];

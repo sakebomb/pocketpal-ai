@@ -577,6 +577,26 @@ class ChatSessionRepository {
     });
   }
 
+  // Toggle pinned state for a session, returns new pinned value
+  async togglePinSession(sessionId: string): Promise<boolean> {
+    const session = await database.collections
+      .get('chat_sessions')
+      .find(sessionId)
+      .catch(() => null);
+
+    if (!session) {
+      return false;
+    }
+
+    const newPinned = !(session as any).pinned;
+    await database.write(async () => {
+      await session.update((record: any) => {
+        record.pinned = newPinned;
+      });
+    });
+    return newPinned;
+  }
+
   // Update session title
   async updateSessionTitle(sessionId: string, newTitle: string): Promise<void> {
     const session = await database.collections

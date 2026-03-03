@@ -170,5 +170,14 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 9,
+      steps: [
+        addColumns({
+          table: 'chat_sessions',
+          columns: [{name: 'pinned', type: 'boolean'}],
+        }),
+      ],
+    },
   ],
 });

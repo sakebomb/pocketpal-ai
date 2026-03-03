@@ -48,6 +48,8 @@ export const mockChatSessionStore = {
     Today: [sessionFixtures[0]],
     Yesterday: [sessionFixtures[1]],
   },
+  pinnedSessions: [],
+  togglePinSession: jest.fn().mockResolvedValue(undefined),
   createNewSession: jest.fn().mockResolvedValue(undefined),
   updateMessage: jest.fn().mockResolvedValue(undefined),
   updateMessageStreaming: jest.fn().mockResolvedValue(undefined),

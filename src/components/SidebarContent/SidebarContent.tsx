@@ -26,6 +26,7 @@ import {
   SearchIcon,
   SettingsIcon,
   ShareIcon,
+  StarIcon,
   TrashIcon,
   AppInfoIcon,
 } from '../../assets/icons';
@@ -50,6 +51,7 @@ interface SessionItemProps {
   onPressDelete: (sessionId: string) => void;
   onPressExport: (sessionId: string) => void;
   onPressSelect: (sessionId: string) => void;
+  onPressPin: (sessionId: string) => void;
   isSelectionMode: boolean;
   isSelected: boolean;
   onToggleSelection: (sessionId: string) => void;
@@ -72,6 +74,7 @@ const SessionItem = React.memo<SessionItemProps>(
     onPressDelete,
     onPressExport,
     onPressSelect,
+    onPressPin,
     isSelectionMode,
     isSelected,
     onToggleSelection,
@@ -122,6 +125,14 @@ const SessionItem = React.memo<SessionItemProps>(
             style={styles.menu}
             contentStyle={{}}
             anchorPosition="bottom">
+            <Menu.Item
+              onPress={() => {
+                onPressPin(session.id);
+                onMenuDismiss();
+              }}
+              label={session.pinned ? 'Unpin' : 'Pin'}
+              leadingIcon={() => <StarIcon stroke={theme.colors.primary} />}
+            />
             <Menu.Item
               onPress={() => {
                 onPressRename(session);
@@ -373,6 +384,10 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
       [l10n, closeMenu],
     );
 
+    const handlePressPin = React.useCallback(async (sessionId: string) => {
+      await chatSessionStore.togglePinSession(sessionId);
+    }, []);
+
     const handlePressExport = React.useCallback(
       async (sessionId: string) => {
         try {
@@ -482,6 +497,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
             onPressDelete={onPressDelete}
             onPressExport={handlePressExport}
             onPressSelect={handlePressSelect}
+            onPressPin={handlePressPin}
             isSelectionMode={chatSessionStore.isSelectionMode}
             isSelected={isSelected}
             onToggleSelection={handleToggleSelection}
@@ -501,6 +517,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
         onPressDelete,
         handlePressExport,
         handlePressSelect,
+        handlePressPin,
         handleToggleSelection,
         theme,
         styles,
@@ -595,6 +612,47 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
             styles.contentWrapper,
             {paddingTop: insets.top, paddingBottom: insets.bottom},
           ]}>
+          {/* Pinned Sessions */}
+          {!chatSessionStore.isSelectionMode &&
+            chatSessionStore.pinnedSessions.length > 0 && (
+              <View>
+                <View style={styles.drawerSection}>
+                  <Text variant="bodySmall" style={styles.dateLabel}>
+                    Pinned
+                  </Text>
+                </View>
+                {chatSessionStore.pinnedSessions.map(item => {
+                  const isActive = chatSessionStore.activeSessionId === item.id;
+                  const isSelected =
+                    chatSessionStore.selectedSessionIds.has(item.id);
+                  return (
+                    <SessionItem
+                      key={item.id}
+                      session={item}
+                      isActive={isActive}
+                      onPress={handleSessionPress}
+                      onLongPress={handleSessionLongPress}
+                      menuVisible={menuVisible}
+                      menuPosition={menuPosition}
+                      onMenuDismiss={closeMenu}
+                      onPressRename={handlePressRename}
+                      onPressDelete={onPressDelete}
+                      onPressExport={handlePressExport}
+                      onPressSelect={handlePressSelect}
+                      onPressPin={handlePressPin}
+                      isSelectionMode={chatSessionStore.isSelectionMode}
+                      isSelected={isSelected}
+                      onToggleSelection={handleToggleSelection}
+                      theme={theme}
+                      styles={styles}
+                      l10n={l10n}
+                    />
+                  );
+                })}
+                <Divider style={styles.divider} />
+              </View>
+            )}
+
           {/* Search Bar */}
           {!chatSessionStore.isSelectionMode && (
             <View
