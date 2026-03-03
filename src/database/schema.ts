@@ -1,7 +1,7 @@
 import {appSchema, tableSchema} from '@nozbe/watermelondb';
 
 export default appSchema({
-  version: 5,
+  version: 8,
   tables: [
     tableSchema({
       name: 'chat_sessions',
@@ -125,6 +125,44 @@ export default appSchema({
         {name: 'generation_settings', type: 'string', isOptional: true}, // JSON stringified
         {name: 'created_at', type: 'number'},
         {name: 'updated_at', type: 'number'},
+      ],
+    }),
+    // Persistent memories per Pal
+    tableSchema({
+      name: 'memories',
+      columns: [
+        {name: 'pal_id', type: 'string', isIndexed: true},
+        {name: 'content', type: 'string'},
+        {name: 'created_at', type: 'number'},
+      ],
+    }),
+    // Documents attached to a Pal for RAG context
+    tableSchema({
+      name: 'documents',
+      columns: [
+        {name: 'pal_id', type: 'string', isIndexed: true},
+        {name: 'name', type: 'string'},
+        {name: 'created_at', type: 'number'},
+      ],
+    }),
+    // Chunks derived from documents (denormalised pal_id for fast queries)
+    tableSchema({
+      name: 'document_chunks',
+      columns: [
+        {name: 'document_id', type: 'string', isIndexed: true},
+        {name: 'pal_id', type: 'string', isIndexed: true},
+        {name: 'content', type: 'string'},
+        {name: 'chunk_index', type: 'number'},
+        {name: 'created_at', type: 'number'},
+      ],
+    }),
+    // Saved prompts for the prompt library
+    tableSchema({
+      name: 'prompts',
+      columns: [
+        {name: 'title', type: 'string'},
+        {name: 'content', type: 'string'},
+        {name: 'created_at', type: 'number'},
       ],
     }),
   ],

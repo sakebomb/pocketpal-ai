@@ -118,5 +118,57 @@ export default schemaMigrations({
         }),
       ],
     },
+    // Migration to version 6: Add memories table for persistent pal memory
+    {
+      toVersion: 6,
+      steps: [
+        createTable({
+          name: 'memories',
+          columns: [
+            {name: 'pal_id', type: 'string', isIndexed: true},
+            {name: 'content', type: 'string'},
+            {name: 'created_at', type: 'number'},
+          ],
+        }),
+      ],
+    },
+    // Migration to version 7: Add documents + document_chunks tables for RAG
+    {
+      toVersion: 7,
+      steps: [
+        createTable({
+          name: 'documents',
+          columns: [
+            {name: 'pal_id', type: 'string', isIndexed: true},
+            {name: 'name', type: 'string'},
+            {name: 'created_at', type: 'number'},
+          ],
+        }),
+        createTable({
+          name: 'document_chunks',
+          columns: [
+            {name: 'document_id', type: 'string', isIndexed: true},
+            {name: 'pal_id', type: 'string', isIndexed: true},
+            {name: 'content', type: 'string'},
+            {name: 'chunk_index', type: 'number'},
+            {name: 'created_at', type: 'number'},
+          ],
+        }),
+      ],
+    },
+    // Migration to version 8: Add prompts table for prompt library
+    {
+      toVersion: 8,
+      steps: [
+        createTable({
+          name: 'prompts',
+          columns: [
+            {name: 'title', type: 'string'},
+            {name: 'content', type: 'string'},
+            {name: 'created_at', type: 'number'},
+          ],
+        }),
+      ],
+    },
   ],
 });
