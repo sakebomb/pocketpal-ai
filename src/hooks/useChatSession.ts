@@ -17,6 +17,10 @@ import {
   toApiCompletionParams,
   CompletionParams,
 } from '../utils/completionTypes';
+import {getToolsForPal} from '../utils/tools';
+import {hasMemoryCapability} from '../utils/pal-capabilities';
+import {memoryRepository} from '../repositories/MemoryRepository';
+import {documentRepository} from '../repositories/DocumentRepository';
 
 // Helper function to prepare completion parameters using OpenAI-compatible messages API
 const prepareCompletion = async ({
@@ -237,10 +241,63 @@ export const useChatSession = (
       ? palStore.pals.find(p => p.id === activeSession.activePalId)
       : null;
 
-    const systemMessages = resolveSystemMessages({
+    let systemMessages = resolveSystemMessages({
       pal,
       model: modelStore.activeModel,
     });
+
+    // Inject persisted memories into the system prompt for memory-capable Pals
+    if (pal && hasMemoryCapability(pal) && pal.id) {
+      try {
+        const memories = await memoryRepository.getMemoriesForPal(pal.id);
+        if (memories.length > 0) {
+          const memoryBlock =
+            '\n\n## What I remember about the user:\n' +
+            memories.map(m => `- ${m}`).join('\n');
+          if (systemMessages.length > 0) {
+            systemMessages = [
+              {
+                role: 'system' as const,
+                content: systemMessages[0].content + memoryBlock,
+              },
+            ];
+          } else {
+            systemMessages = [{role: 'system' as const, content: memoryBlock}];
+          }
+        }
+      } catch (e) {
+        // Non-fatal: proceed without memories if DB read fails
+        console.error('Failed to load memories:', e);
+      }
+    }
+
+    // Inject relevant document chunks into the system prompt (RAG)
+    if (pal && pal.id) {
+      try {
+        const relevantChunks = await documentRepository.getRelevantChunksForPal(
+          pal.id,
+          message.text,
+        );
+        if (relevantChunks.length > 0) {
+          const ragBlock =
+            '\n\n## Relevant context from attached documents:\n' +
+            relevantChunks.map((c, i) => `### Excerpt ${i + 1}\n${c}`).join('\n\n');
+          if (systemMessages.length > 0) {
+            systemMessages = [
+              {
+                role: 'system' as const,
+                content: systemMessages[0].content + ragBlock,
+              },
+            ];
+          } else {
+            systemMessages = [{role: 'system' as const, content: ragBlock}];
+          }
+        }
+      } catch (e) {
+        // Non-fatal: proceed without RAG context if DB read fails
+        console.error('Failed to load document chunks:', e);
+      }
+    }
 
     // Prepare completion parameters and create message record
     const {cleanCompletionParams, messageInfo} = await prepareCompletion({
@@ -257,66 +314,178 @@ export const useChatSession = (
 
     currentMessageInfo.current = messageInfo;
 
+    // Maximum number of tool-call → execute → re-prompt iterations
+    const MAX_TOOL_ITERATIONS = 8;
+
+    // Get tools for the active Pal (empty lists if Pal has no tools capability)
+    const {definitions: toolDefinitions, handlers: toolHandlers} =
+      getToolsForPal(pal);
+    const hasTools = toolDefinitions.length > 0;
+
+    // Inject tools into completion params when the Pal supports them.
+    // jinja: true is required for the model to handle tool call formatting.
+    if (hasTools) {
+      cleanCompletionParams.tools = toolDefinitions as any;
+      cleanCompletionParams.tool_choice = 'auto' as any;
+      cleanCompletionParams.jinja = true;
+    }
+
+    uiStore.setLastPromptTokens(null, chatSessionStore.activeSessionId);
+
     try {
       // Track time to first token
       const completionStartTime = Date.now();
       let timeToFirstToken: number | null = null;
 
-      // Create the completion promise and register it with modelStore
-      // This enables safe context release by waiting for the promise to finish
-      const completionPromise = context.completion(
-        cleanCompletionParams,
-        data => {
-          if (currentMessageInfo.current) {
-            // Capture time to first token on the first token received
-            if (timeToFirstToken === null && (data.token || data.content)) {
-              timeToFirstToken = Date.now() - completionStartTime;
-            }
-
-            if (!modelStore.isStreaming) {
-              modelStore.setIsStreaming(true);
-            }
-
-            // Use content and reasoning_content from the streaming data
-            // llama.rn already separates these for us when enable_thinking is true
-            const {content = '', reasoning_content: reasoningContent} = data;
-
-            // Update message with the separated content
-            if (content || reasoningContent) {
-              // Build the update object
-              const update: any = {
-                metadata: {
-                  partialCompletionResult: {
-                    reasoning_content: reasoningContent,
-                    content: content.replace(/^\s+/, ''),
-                  },
-                },
-              };
-
-              // Only update text if we have actual content
-              if (content) {
-                update.text = content.replace(/^\s+/, '');
-              }
-
-              // Use the store's streaming update method which properly triggers reactivity
-              chatSessionStore.updateMessageStreaming(
-                currentMessageInfo.current.id,
-                currentMessageInfo.current.sessionId,
-                update,
-              );
-            }
+      // Streaming callback — used on the first iteration of every completion.
+      // If the model invokes a tool, the partial text is cleared and subsequent
+      // iterations run silently; the final answer is then set in one shot.
+      // If no tools are called, the first (and only) iteration streams normally.
+      const streamingCallback = (data: any) => {
+        if (currentMessageInfo.current) {
+          if (timeToFirstToken === null && (data.token || data.content)) {
+            timeToFirstToken = Date.now() - completionStartTime;
           }
-        },
-      );
 
-      // Register the promise so releaseContext can wait for it
-      modelStore.registerCompletionPromise(completionPromise);
+          if (!modelStore.isStreaming) {
+            modelStore.setIsStreaming(true);
+          }
 
-      // Await the completion
-      const result = await completionPromise;
+          const {content = '', reasoning_content: reasoningContent} = data;
 
-      // Clear the promise after completion finishes
-      modelStore.clearCompletionPromise();
+          if (content || reasoningContent) {
+            const update: any = {
+              metadata: {
+                partialCompletionResult: {
+                  reasoning_content: reasoningContent,
+                  content: content.replace(/^\s+/, ''),
+                },
+              },
+            };
+
+            if (content) {
+              update.text = content.replace(/^\s+/, '');
+            }
+
+            chatSessionStore.updateMessageStreaming(
+              currentMessageInfo.current.id,
+              currentMessageInfo.current.sessionId,
+              update,
+            );
+          }
+        }
+      };
+
+      // Mutable message list for the tool loop
+      let loopMessages = [...(cleanCompletionParams.messages ?? [])];
+      let result: any = null;
+      // Tracks whether any tool call has been executed this turn.
+      // Used to decide streaming strategy: stream until the first tool call,
+      // then run silently and set the final answer in one shot.
+      let hasExecutedAnyTool = false;
+
+      for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+        // Check if the user stopped generation between iterations
+        if (!modelStore.inferencing) {
+          break;
+        }
+
+        const iterParams = {...cleanCompletionParams, messages: loopMessages};
+
+        // Stream on the first call (no tool executed yet) so the user sees tokens
+        // arriving immediately. Once a tool fires, run silently — the final answer
+        // will be set in one shot after all tools resolve.
+        const shouldStream = !hasExecutedAnyTool;
+        const completionPromise = context.completion(
+          iterParams,
+          shouldStream ? streamingCallback : undefined,
+        );
+
+        // Register so releaseContext can wait for the promise to finish
+        modelStore.registerCompletionPromise(completionPromise);
+        result = await completionPromise;
+        modelStore.clearCompletionPromise();
+
+        // No tool calls → this is the final answer, exit the loop
+        if (!result.tool_calls || result.tool_calls.length === 0) {
+          break;
+        }
+
+        // Tool call(s) returned. If we were streaming partial text, clear it —
+        // the tool indicator will take over and the final answer comes in one shot.
+        if (shouldStream && currentMessageInfo.current) {
+          chatSessionStore.updateMessageStreaming(
+            currentMessageInfo.current.id,
+            currentMessageInfo.current.sessionId,
+            {text: ''},
+          );
+          modelStore.setIsStreaming(false);
+        }
+
+        hasExecutedAnyTool = true;
+
+        // Append the assistant's tool-call turn to the message list
+        loopMessages = [
+          ...loopMessages,
+          {
+            role: 'assistant' as const,
+            content: result.text ?? '',
+            tool_calls: result.tool_calls,
+          },
+        ];
+
+        // Execute each requested tool and append results
+        for (const toolCall of result.tool_calls) {
+          const toolName: string = toolCall.function?.name ?? 'unknown';
+          uiStore.setActiveToolCall(toolName);
+
+          let toolResultContent: string;
+          try {
+            const args = JSON.parse(toolCall.function?.arguments ?? '{}');
+            const handler = toolHandlers[toolName];
+            if (handler) {
+              toolResultContent = await handler(args);
+            } else {
+              toolResultContent = JSON.stringify({
+                error: `Unknown tool: ${toolName}`,
+              });
+            }
+          } catch (e) {
+            toolResultContent = JSON.stringify({error: String(e)});
+          }
+
+          loopMessages = [
+            ...loopMessages,
+            {
+              role: 'tool' as const,
+              tool_call_id: toolCall.id,
+              content: toolResultContent,
+            },
+          ];
+        }
+      }
+
+      // Always clear the tool indicator when the loop exits
+      uiStore.setActiveToolCall(null);
+
+      // If result is still null (user stopped before any completion), bail out cleanly
+      if (!result) {
+        modelStore.setInferencing(false);
+        modelStore.setIsStreaming(false);
+        chatSessionStore.setIsGenerating(false);
+        return;
+      }
+
+      // If tools were executed, streaming didn't show the final answer —
+      // set it in one shot now. If no tools were executed, streaming already
+      // populated the message text so nothing to do here.
+      if (hasExecutedAnyTool && result.text && currentMessageInfo.current) {
+        chatSessionStore.updateMessageStreaming(
+          currentMessageInfo.current.id,
+          currentMessageInfo.current.sessionId,
+          {text: result.text.replace(/^\s+/, '')},
+        );
+      }
 
       // Log completion result with time to first token for debugging
       if (__DEV__) {
@@ -351,12 +520,62 @@ export const useChatSession = (
           },
         },
       );
+      // Surface prompt token count for context window indicator
+      const promptTokens =
+        (result as any)?.usage?.prompt_tokens ??
+        (result as any)?.timings?.prompt_n ??
+        null;
+      uiStore.setLastPromptTokens(promptTokens, chatSessionStore.activeSessionId);
+
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
+
+      // Auto-generate session title on the first exchange (2 messages: user + assistant)
+      const sessionForTitle = chatSessionStore.activeSessionId
+        ? chatSessionStore.sessions.find(
+            s => s.id === chatSessionStore.activeSessionId,
+          )
+        : null;
+      if (
+        sessionForTitle &&
+        sessionForTitle.messages.length === 2 &&
+        result?.text &&
+        context
+      ) {
+        const userText = message.text.slice(0, 500);
+        const assistantText = result.text.slice(0, 500);
+        const titleSessionId = chatSessionStore.activeSessionId!;
+        // Fire-and-forget — never blocks the UI
+        context
+          .completion({
+            messages: [
+              {
+                role: 'user' as const,
+                content: `Conversation:\nUser: ${userText}\nAssistant: ${assistantText}\n\nWrite a concise 4-6 word title for this conversation. Output only the title.`,
+              },
+            ],
+            n_predict: 15,
+            temperature: 0.3,
+            stop: ['\n', '.'],
+          })
+          .then(titleResult => {
+            const title = titleResult?.text
+              ?.trim()
+              .replace(/^["'`]|["'`]$/g, '');
+            if (title && title.length > 2) {
+              chatSessionStore.updateSessionTitleBySessionId(
+                titleSessionId,
+                title,
+              );
+            }
+          })
+          .catch(() => {});
+      }
     } catch (error) {
-      // Clear the promise on error too
+      // Clear the promise and tool indicator on error
       modelStore.clearCompletionPromise();
+      uiStore.setActiveToolCall(null);
       console.error('Completion error:', error);
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);

@@ -51,6 +51,13 @@ export class UIStore {
   // Warning state for chat-related warnings (like multimodal warnings)
   chatWarning: ErrorState | null = null;
 
+  // Name of the tool currently being executed (null when idle)
+  activeToolCall: string | null = null;
+
+  // Prompt token count from the last completed generation (not persisted)
+  lastPromptTokens: number | null = null;
+  lastPromptTokensSessionId: string | null = null;
+
   showError(message: string) {
     // TODO: Implement error display logic (e.g., toast, alert, etc.)
     console.error(message);
@@ -65,6 +72,19 @@ export class UIStore {
   clearChatWarning() {
     runInAction(() => {
       this.chatWarning = null;
+    });
+  }
+
+  setActiveToolCall(name: string | null) {
+    runInAction(() => {
+      this.activeToolCall = name;
+    });
+  }
+
+  setLastPromptTokens(n: number | null, sessionId?: string | null) {
+    runInAction(() => {
+      this.lastPromptTokens = n;
+      this.lastPromptTokensSessionId = sessionId ?? null;
     });
   }
 

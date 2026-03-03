@@ -45,7 +45,7 @@ import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
 
-import {modelStore, uiStore, hfStore} from '../../store';
+import {modelStore, uiStore, hfStore, apiKeyStore} from '../../store';
 import {languageDisplayNames} from '../../locales';
 
 import {CacheType} from '../../utils/types';
@@ -84,6 +84,8 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showMmapMenu, setShowMmapMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
+  const [tavilyKeyInput, setTavilyKeyInput] = useState('');
+  const [tavilyKeyVisible, setTavilyKeyVisible] = useState(false);
   const [gpuSupported, setGpuSupported] = useState(false);
   const [keyCacheAnchor, setKeyCacheAnchor] = useState<{x: number; y: number}>({
     x: 0,
@@ -1144,6 +1146,66 @@ export const SettingsScreen: React.FC = observer(() => {
               </Card.Content>
             </Card>
           )}
+
+          {/* API Keys */}
+          <Card elevation={0} style={styles.card}>
+            <Card.Title title="API Keys" />
+            <Card.Content>
+              <View style={styles.settingItemContainer}>
+                <View style={styles.textContainer}>
+                  <Text variant="titleMedium" style={styles.textLabel}>
+                    Tavily Web Search
+                  </Text>
+                  <Text variant="labelSmall" style={styles.textDescription}>
+                    {apiKeyStore.hasTavilyKey
+                      ? 'API key saved. Web search is active for Pals with the web capability.'
+                      : 'Add a Tavily API key to enable web search in Pals. Get one at tavily.com.'}
+                  </Text>
+                </View>
+              </View>
+              <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
+                <TextInput
+                  style={{flex: 1}}
+                  value={tavilyKeyInput}
+                  onChangeText={setTavilyKeyInput}
+                  placeholder={
+                    apiKeyStore.hasTavilyKey ? '••••••••••••••••' : 'tvly-...'
+                  }
+                  secureTextEntry={!tavilyKeyVisible}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Button
+                  mode="text"
+                  compact
+                  onPress={() => setTavilyKeyVisible(v => !v)}>
+                  {tavilyKeyVisible ? 'Hide' : 'Show'}
+                </Button>
+              </View>
+              <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
+                <Button
+                  mode="outlined"
+                  disabled={!tavilyKeyInput.trim()}
+                  onPress={async () => {
+                    await apiKeyStore.setTavilyApiKey(tavilyKeyInput.trim());
+                    setTavilyKeyInput('');
+                    setTavilyKeyVisible(false);
+                  }}>
+                  Save Key
+                </Button>
+                {apiKeyStore.hasTavilyKey && (
+                  <Button
+                    mode="text"
+                    onPress={async () => {
+                      await apiKeyStore.clearTavilyApiKey();
+                      setTavilyKeyInput('');
+                    }}>
+                    Remove
+                  </Button>
+                )}
+              </View>
+            </Card.Content>
+          </Card>
 
           {/* Export Options */}
           <Card elevation={0} style={styles.card}>
