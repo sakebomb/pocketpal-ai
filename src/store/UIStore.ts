@@ -58,6 +58,9 @@ export class UIStore {
   lastPromptTokens: number | null = null;
   lastPromptTokensSessionId: string | null = null;
 
+  // Chat message search (null = inactive, string = query)
+  chatSearchQuery: string | null = null;
+
   showError(message: string) {
     // TODO: Implement error display logic (e.g., toast, alert, etc.)
     console.error(message);
@@ -78,6 +81,12 @@ export class UIStore {
   setActiveToolCall(name: string | null) {
     runInAction(() => {
       this.activeToolCall = name;
+    });
+  }
+
+  setChatSearch(q: string | null) {
+    runInAction(() => {
+      this.chatSearchQuery = q;
     });
   }
 

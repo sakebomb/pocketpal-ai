@@ -39,4 +39,6 @@ export const mockUiStore = {
   lastPromptTokens: null,
   lastPromptTokensSessionId: null,
   setLastPromptTokens: jest.fn(),
+  chatSearchQuery: null,
+  setChatSearch: jest.fn(),
 };

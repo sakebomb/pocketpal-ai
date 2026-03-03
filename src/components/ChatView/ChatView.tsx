@@ -6,6 +6,9 @@ import {
   LayoutAnimation,
   StatusBar,
   StatusBarProps,
+  StyleSheet,
+  Text,
+  TextInput,
   View,
   TouchableOpacity,
   Keyboard,
@@ -36,7 +39,7 @@ import {useTheme, useMessageActions, usePrevious} from '../../hooks';
 import ImageView from './ImageView';
 import {createStyles} from './styles';
 
-import {chatSessionStore, modelStore} from '../../store';
+import {chatSessionStore, modelStore, uiStore} from '../../store';
 
 import {MessageType, User} from '../../utils/types';
 import {Pal} from '../../types/pal';
@@ -368,9 +371,27 @@ export const ChatView = observer(
       });
     }, []);
 
+    // ============ SEARCH FILTERING ============
+    const searchQuery = uiStore.chatSearchQuery;
+
+    // Clear search when session changes
+    React.useEffect(() => {
+      uiStore.setChatSearch(null);
+    }, [chatSessionStore.activeSessionId]);
+
+    const filteredMessages = React.useMemo(() => {
+      if (!searchQuery) return messages;
+      const lower = searchQuery.toLowerCase();
+      return messages.filter(
+        m => m.type === 'text' && m.text.toLowerCase().includes(lower),
+      );
+    }, [messages, searchQuery]);
+
+    const searchMatchCount = searchQuery ? filteredMessages.length : 0;
+
     // ============ MESSAGE PROCESSING & CALCULATIONS ============
     // Calculate chat messages with date headers and user names
-    const {chatMessages, gallery} = calculateChatMessages(messages, user, {
+    const {chatMessages, gallery} = calculateChatMessages(filteredMessages, user, {
       customDateHeaderText,
       dateFormat,
       showUserNames,
@@ -913,6 +934,37 @@ export const ChatView = observer(
             <ChatHeader />
           </View>
 
+          {/* Search bar */}
+          {searchQuery !== null && (
+            <View style={searchBarStyles.container}>
+              <TextInput
+                value={searchQuery}
+                onChangeText={q => uiStore.setChatSearch(q)}
+                placeholder="Search messages…"
+                placeholderTextColor={theme.colors.onSurfaceVariant}
+                autoFocus
+                style={[
+                  searchBarStyles.input,
+                  {
+                    color: theme.colors.onSurface,
+                    borderColor: theme.colors.outlineVariant,
+                  },
+                ]}
+                returnKeyType="search"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+              {searchQuery.length > 0 && (
+                <Text
+                  style={[
+                    searchBarStyles.count,
+                    {color: theme.colors.onSurfaceVariant},
+                  ]}>
+                  {searchMatchCount}
+                </Text>
+              )}
+            </View>
+          )}
+
           {/* Main chat container */}
           <Reanimated.View style={styles.chatContainer}>
             {customContent}
@@ -997,3 +1049,26 @@ export const ChatView = observer(
     );
   },
 );
+
+const searchBarStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 8,
+  },
+  input: {
+    flex: 1,
+    height: 36,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    fontSize: 14,
+  },
+  count: {
+    fontSize: 12,
+    minWidth: 24,
+    textAlign: 'right',
+  },
+});

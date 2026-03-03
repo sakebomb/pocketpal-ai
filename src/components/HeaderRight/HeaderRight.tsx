@@ -6,11 +6,13 @@ import {IconButton, useTheme} from 'react-native-paper';
 
 import {
   // ClockFastForwardIcon,
+  CloseIcon,
   DotsVerticalIcon,
   DuplicateIcon,
   EditBoxIcon,
   EditIcon,
   GridIcon,
+  SearchIcon,
   SettingsIcon,
   ShareIcon,
   TrashIcon,
@@ -155,9 +157,25 @@ export const HeaderRight: React.FC = observer(() => {
     closeMenu();
   };
 
+  const isSearchActive = uiStore.chatSearchQuery !== null;
+
   return (
     <View style={styles.headerRightContainer}>
       {uiStore.displayMemUsage && <UsageStats width={40} height={20} />}
+      {session?.id && (
+        <IconButton
+          icon={() =>
+            isSearchActive ? (
+              <CloseIcon stroke={theme.colors.primary} />
+            ) : (
+              <SearchIcon stroke={theme.colors.primary} />
+            )
+          }
+          style={styles.chatBtn}
+          onPress={() => uiStore.setChatSearch(isSearchActive ? null : '')}
+          testID="search-button"
+        />
+      )}
       <IconButton
         icon={() => <EditBoxIcon stroke={theme.colors.primary} />}
         testID="reset-button"

@@ -79,5 +79,7 @@ module.exports = {
     '@env': '<rootDir>/__mocks__/external/@env.js',
     '@gorhom/bottom-sheet':
       '<rootDir>/__mocks__/external/@gorhom/bottom-sheet.js',
+    'react-native-webview':
+      '<rootDir>/__mocks__/external/react-native-webview.js',
   },
 };
