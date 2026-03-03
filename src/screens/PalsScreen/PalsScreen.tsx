@@ -117,6 +117,11 @@ export const PalsScreen: React.FC = observer(() => {
     setShowPalSheet(true);
   };
 
+  const handleCreateFromTemplate = (templatePal: Partial<Pal>) => {
+    setCurrentPal(templatePal);
+    setShowPalSheet(true);
+  };
+
   const loadData = async () => {
     try {
       // Load public pals for browsing
@@ -429,6 +434,7 @@ export const PalsScreen: React.FC = observer(() => {
         activeAction={activeAction}
         onActionPress={handleActionPress}
         onCreatePal={handleCreatePal}
+        onCreateFromTemplate={handleCreateFromTemplate}
         isAuthenticated={authService.isAuthenticated}
       />
 

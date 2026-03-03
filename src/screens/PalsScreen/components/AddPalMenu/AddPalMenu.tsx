@@ -9,15 +9,18 @@ import {Menu} from '../../../../components/Menu';
 import {useTheme} from '../../../../hooks';
 import {L10nContext} from '../../../../utils';
 import {createStyles} from './styles';
+import {PAL_TEMPLATES, PalTemplate} from '../../../../utils/pal-templates';
+import type {Pal} from '../../../../types/pal';
 
 interface AddPalMenuProps {
   iconColor: string;
   iconSize: number;
   onCreatePal: (type: 'assistant' | 'roleplay' | 'video') => void;
+  onCreateFromTemplate?: (template: Partial<Pal>) => void;
 }
 
 export const AddPalMenu: React.FC<AddPalMenuProps> = observer(
-  ({iconColor, iconSize, onCreatePal}) => {
+  ({iconColor, iconSize, onCreatePal, onCreateFromTemplate}) => {
     const theme = useTheme();
     const styles = createStyles(theme);
     const l10n = useContext(L10nContext);
@@ -39,6 +42,11 @@ export const AddPalMenu: React.FC<AddPalMenuProps> = observer(
     const handleCreateVideo = () => {
       closeMenu();
       onCreatePal('video');
+    };
+
+    const handleCreateFromTemplate = (template: PalTemplate) => {
+      closeMenu();
+      onCreateFromTemplate?.(template.create());
     };
 
     return (
@@ -71,6 +79,18 @@ export const AddPalMenu: React.FC<AddPalMenuProps> = observer(
           icon="video"
           onPress={handleCreateVideo}
           label={l10n.palsScreen.video}
+        />
+        <Menu.Item
+          icon="view-grid-outline"
+          label="From Template"
+          submenu={PAL_TEMPLATES.map(t => (
+            <Menu.Item
+              key={t.key}
+              icon={t.icon}
+              label={t.name}
+              onPress={() => handleCreateFromTemplate(t)}
+            />
+          ))}
         />
       </Menu>
     );

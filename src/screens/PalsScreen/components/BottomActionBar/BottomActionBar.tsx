@@ -19,6 +19,7 @@ interface BottomActionBarProps {
   activeAction: BottomActionType;
   onActionPress: (action: BottomActionType) => void;
   onCreatePal: (type: 'assistant' | 'roleplay' | 'video') => void;
+  onCreateFromTemplate?: (template: any) => void;
   isAuthenticated: boolean;
 }
 
@@ -52,7 +53,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
 };
 
 export const BottomActionBar: React.FC<BottomActionBarProps> = observer(
-  ({onActionPress, onCreatePal, isAuthenticated}) => {
+  ({onActionPress, onCreatePal, onCreateFromTemplate, isAuthenticated}) => {
     const theme = useTheme();
     const insets = useSafeAreaInsets();
     const styles = createStyles(theme, insets);
@@ -84,6 +85,7 @@ export const BottomActionBar: React.FC<BottomActionBarProps> = observer(
             iconColor={iconColor}
             iconSize={iconSize}
             onCreatePal={onCreatePal}
+            onCreateFromTemplate={onCreateFromTemplate}
           />
 
           {/* Profile */}

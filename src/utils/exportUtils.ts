@@ -7,6 +7,7 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
 import {uiStore, palStore} from '../store';
+import {userId} from './chat';
 import {ensureLegacyStoragePermission} from './androidPermission';
 import {getAbsoluteThumbnailPath, isLocalThumbnailPath} from './imageUtils';
 import type {Pal} from '../types/pal';
@@ -259,11 +260,58 @@ export const exportLegacyChatSessions = async (): Promise<void> => {
 };
 
 /**
- * Helper function to share JSON data as a file
+ * Export a single chat session as a human-readable Markdown file
+ */
+export const exportChatSessionAsMarkdown = async (
+  sessionId: string,
+): Promise<void> => {
+  try {
+    const sessionData = await chatSessionRepository.getSessionById(sessionId);
+    if (!sessionData) {
+      throw new Error('Session not found');
+    }
+
+    const {session, messages} = sessionData;
+    const exportDate = format(new Date(session.date), 'yyyy-MM-dd HH:mm');
+
+    const lines: string[] = [
+      `# ${session.title}`,
+      '',
+      `*Exported: ${exportDate}*`,
+      '',
+      '---',
+      '',
+    ];
+
+    for (const msg of messages) {
+      const authorId =
+        typeof msg.author === 'string' ? msg.author : msg.author?.id;
+      const role = authorId === userId ? 'User' : 'Assistant';
+      lines.push(`### ${role}`, '', msg.text ?? '', '', '---', '');
+    }
+
+    const mdContent = lines.join('\n');
+
+    const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+    const sanitizedTitle = session.title
+      .replace(/[^a-z0-9]/gi, '_')
+      .toLowerCase();
+    const filename = `chat_${sanitizedTitle}_${timestamp}.md`;
+
+    await shareJsonData(mdContent, filename, 'text/plain');
+  } catch (error) {
+    console.error('Error exporting chat session as markdown:', error);
+    throw error;
+  }
+};
+
+/**
+ * Helper function to share text data as a file
  */
 const shareJsonData = async (
   jsonData: string,
   filename: string,
+  mimeType: string = 'application/json',
 ): Promise<void> => {
   const currentL10n = uiStore.l10n;
   try {
@@ -277,7 +325,7 @@ const shareJsonData = async (
       await Share.open({
         url: `file://${tempFilePath}`,
         title: `Share ${filename}`,
-        type: 'application/json',
+        type: mimeType,
         failOnCancel: false,
       });
     } else if (Platform.OS === 'android' && Platform.Version === 29) {
@@ -287,7 +335,7 @@ const shareJsonData = async (
         await Share.open({
           url: `file://${tempFilePath}`,
           title: `Share ${filename}`,
-          type: 'application/json',
+          type: mimeType,
           failOnCancel: false,
         });
         return; // Exit early after sharing
@@ -304,7 +352,7 @@ const shareJsonData = async (
           await Share.open({
             url: `file://${tempFilePath}`,
             title: `Share ${filename}`,
-            type: 'application/json',
+            type: mimeType,
             failOnCancel: false,
           });
           return; // Exit early after sharing
@@ -340,7 +388,7 @@ const shareJsonData = async (
                     title: `Share ${filename}`,
                     message: 'PocketPal AI Chat Export',
                     url: `file://${savePath}`,
-                    type: 'application/json',
+                    type: mimeType,
                     failOnCancel: false,
                   };
 
