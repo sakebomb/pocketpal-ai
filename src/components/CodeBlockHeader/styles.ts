@@ -13,6 +13,10 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurfaceVariant,
       fontSize: 12,
     },
+    actions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
     iconTouchable: {
       padding: 12, // 16 (icon) + 10*2 = 40 for accessibility
       justifyContent: 'center',

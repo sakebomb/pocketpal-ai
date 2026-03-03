@@ -48,6 +48,23 @@ export const createStyles = (theme: MD3Theme) =>
     menu: {
       width: 170,
     },
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: 12,
+      marginVertical: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: StyleSheet.hairlineWidth,
+      backgroundColor: theme.colors.surfaceVariant,
+      gap: 6,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 14,
+      paddingVertical: 2,
+    },
     sessionItem: {
       position: 'relative',
     },

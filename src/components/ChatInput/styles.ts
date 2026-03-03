@@ -29,6 +29,10 @@ export const createStyles = ({
       borderRadius: 100,
       opacity: 0.9,
     },
+    promptLibraryIcon: {
+      margin: 0,
+      padding: 0,
+    },
     thinkingToggle: {
       height: 28,
       width: 28,
@@ -110,6 +114,11 @@ export const createStyles = ({
       position: 'relative',
       flexDirection: 'row',
       alignItems: 'center',
+    },
+    tokenEstimate: {
+      fontSize: 11,
+      marginRight: 8,
+      opacity: 0.7,
     },
     editBar: {
       position: 'absolute',

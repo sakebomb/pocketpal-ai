@@ -6,7 +6,8 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import {View, TextInput as RNTextInput} from 'react-native';
+import {View, TextInput as RNTextInput, StyleSheet, Text} from 'react-native';
+import {Switch} from 'react-native-paper';
 
 import {z} from 'zod';
 import {observer} from 'mobx-react-lite';
@@ -24,12 +25,13 @@ import {ModelSelector} from './ModelSelector';
 import {SectionDivider} from './SectionDivider';
 import {ModelNotAvailable} from './ModelNotAvailable';
 import {SystemPromptSection} from './SystemPromptSection';
+import {DocumentsSection} from './DocumentsSection';
 import {DynamicParameterForm} from '../DynamicParameters';
 import {PalGenerationSettingsSheet} from '../PalGenerationSettingsSheet';
 
 import {palStore} from '../../store';
 
-import type {Pal} from '../../types/pal';
+import type {Pal, PalCapabilities} from '../../types/pal';
 
 import {L10nContext} from '../../utils';
 
@@ -60,6 +62,18 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
     const theme = useTheme();
     const styles = createStyles(theme);
     const l10n = useContext(L10nContext);
+
+    // Capabilities state — controlled separately from React Hook Form
+    const [capabilities, setCapabilities] = useState<PalCapabilities>(
+      pal.capabilities || {},
+    );
+
+    const toggleCapability = useCallback(
+      (key: keyof PalCapabilities) => {
+        setCapabilities(prev => ({...prev, [key]: !prev[key]}));
+      },
+      [],
+    );
 
     // Internal state for generation settings sheet
     const [showGenerationSettings, setShowGenerationSettings] = useState(false);
@@ -139,6 +153,11 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
       },
       [methods],
     );
+
+    // Sync capabilities when pal changes
+    useEffect(() => {
+      setCapabilities(pal.capabilities || {});
+    }, [pal]);
 
     // Initialize form with pal data
     useEffect(() => {
@@ -249,7 +268,7 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
           parameters,
           parameterSchema: activeSchema,
           source: pal.source || 'local',
-          capabilities: pal.capabilities || {},
+          capabilities,
           // Include (local) completion settings if they exist
           completionSettings: data.completionSettings,
         };
@@ -375,6 +394,37 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
                   parameterSchema={activeSchema}
                 />
 
+                <SectionDivider label="Capabilities" />
+                <View style={capabilityStyles.section}>
+                  <CapabilityRow
+                    label="Tool Use"
+                    description="Enables function calling (required for all tools below)"
+                    value={!!capabilities.tools}
+                    onToggle={() => toggleCapability('tools')}
+                  />
+                  <CapabilityRow
+                    label="Web Search"
+                    description="Search the web via Tavily (requires API key in Settings)"
+                    value={!!capabilities.web}
+                    onToggle={() => toggleCapability('web')}
+                    disabled={!capabilities.tools}
+                  />
+                  <CapabilityRow
+                    label="Memory"
+                    description="Remember facts across conversations"
+                    value={!!capabilities.memory}
+                    onToggle={() => toggleCapability('memory')}
+                    disabled={!capabilities.tools}
+                  />
+                </View>
+
+                {pal.id && (
+                  <>
+                    <SectionDivider label="Documents" />
+                    <DocumentsSection palId={pal.id} />
+                  </>
+                )}
+
                 <ColorSection />
 
                 {/* Generation Settings Section - only for existing local pals */}
@@ -432,3 +482,69 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
     );
   },
 );
+
+interface CapabilityRowProps {
+  label: string;
+  description: string;
+  value: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+}
+
+const CapabilityRow: React.FC<CapabilityRowProps> = ({
+  label,
+  description,
+  value,
+  onToggle,
+  disabled,
+}) => (
+  <View style={capabilityStyles.row}>
+    <View style={capabilityStyles.rowText}>
+      <Text
+        style={[capabilityStyles.label, disabled && capabilityStyles.dimmed]}>
+        {label}
+      </Text>
+      <Text
+        style={[
+          capabilityStyles.description,
+          disabled && capabilityStyles.dimmed,
+        ]}>
+        {description}
+      </Text>
+    </View>
+    <Switch
+      value={value && !disabled}
+      onValueChange={disabled ? undefined : onToggle}
+      disabled={disabled}
+    />
+  </View>
+);
+
+const capabilityStyles = StyleSheet.create({
+  section: {
+    paddingHorizontal: 4,
+    gap: 4,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  rowText: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  description: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  dimmed: {
+    opacity: 0.4,
+  },
+});

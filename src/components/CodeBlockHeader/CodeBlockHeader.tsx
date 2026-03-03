@@ -4,7 +4,7 @@ import {View, Text, TouchableOpacity} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
-import {CopyIcon} from '../../assets/icons';
+import {CopyIcon, PlayIcon} from '../../assets/icons';
 
 import {useTheme} from '../../hooks';
 
@@ -13,6 +13,7 @@ import {createStyles} from './styles';
 interface CodeBlockHeaderProps {
   language: string;
   content: string;
+  onRenderPress?: () => void;
 }
 
 const hapticOptions = {
@@ -23,6 +24,7 @@ const hapticOptions = {
 export const CodeBlockHeader: React.FC<CodeBlockHeaderProps> = ({
   language,
   content,
+  onRenderPress,
 }) => {
   const theme = useTheme();
   const styles = createStyles(theme);
@@ -37,13 +39,24 @@ export const CodeBlockHeader: React.FC<CodeBlockHeaderProps> = ({
       <Text style={styles.codeLanguage} numberOfLines={1} ellipsizeMode="tail">
         {language}
       </Text>
-      <TouchableOpacity onPress={handleCopy} style={styles.iconTouchable}>
-        <CopyIcon
-          width={16}
-          height={16}
-          stroke={theme.colors.onSurfaceVariant}
-        />
-      </TouchableOpacity>
+      <View style={styles.actions}>
+        {onRenderPress && (
+          <TouchableOpacity onPress={onRenderPress} style={styles.iconTouchable}>
+            <PlayIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.onSurfaceVariant}
+            />
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity onPress={handleCopy} style={styles.iconTouchable}>
+          <CopyIcon
+            width={16}
+            height={16}
+            stroke={theme.colors.onSurfaceVariant}
+          />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };

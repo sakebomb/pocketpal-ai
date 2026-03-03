@@ -1,5 +1,5 @@
 import {View} from 'react-native';
-import React, {useMemo} from 'react';
+import React, {useMemo, useState} from 'react';
 
 import {marked} from 'marked';
 import RenderHtml, {defaultSystemFonts} from 'react-native-render-html';
@@ -9,6 +9,7 @@ import {atomOneDark} from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import {useTheme} from '../../hooks';
 import {ThinkingBubble} from '../ThinkingBubble';
 import {CodeBlockHeader} from '../CodeBlockHeader';
+import {ArtifactModal, isRenderableContent} from '../ArtifactModal';
 
 import {createTagsStyles, createStyles} from './styles';
 import {tableRenderers, tableHTMLElementModels} from './TableRenderers';
@@ -59,7 +60,11 @@ const decodeHTMLEntities = (text: string): string => {
   return decoded;
 };
 
-const CodeRenderer = ({TDefaultRenderer, ...props}: any) => {
+const CodeRenderer = ({
+  TDefaultRenderer,
+  onArtifactOpen,
+  ...props
+}: any) => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const isCodeBlock = props?.tnode?.parent?.tagName === 'pre';
@@ -84,9 +89,19 @@ const CodeRenderer = ({TDefaultRenderer, ...props}: any) => {
   // Decode HTML entities (&lt; -> <, &gt; -> >, etc.)
   const content = decodeHTMLEntities(rawHtml);
 
+  const renderable = isRenderableContent(content, language);
+  const handleRenderPress =
+    renderable && onArtifactOpen
+      ? () => onArtifactOpen(content, language)
+      : undefined;
+
   return (
     <View>
-      <CodeBlockHeader language={language} content={content} />
+      <CodeBlockHeader
+        language={language}
+        content={content}
+        onRenderPress={handleRenderPress}
+      />
       <CodeHighlighter
         hljsStyle={atomOneDark}
         language={language}
@@ -108,6 +123,11 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     const styles = createStyles(theme);
     const tagsStyles = useMemo(() => createTagsStyles(theme), [theme]);
 
+    const [artifact, setArtifact] = useState<{
+      content: string;
+      language: string;
+    } | null>(null);
+
     // Create separate tag styles for reasoning content with thinking bubble styling
     const reasoningTagsStyles = useMemo(
       () => ({
@@ -124,10 +144,11 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
 
     const renderers = useMemo(
       () => ({
-        code: (props: any) => CodeRenderer(props),
+        code: (props: any) =>
+          CodeRenderer({...props, onArtifactOpen: setArtifact}),
         ...tableRenderers,
       }),
-      [],
+      [setArtifact],
     );
 
     const defaultTextProps = useMemo(
@@ -186,6 +207,15 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
             systemFonts={systemFonts}
             renderers={renderers}
             customHTMLElementModels={tableHTMLElementModels}
+          />
+        )}
+
+        {artifact && (
+          <ArtifactModal
+            isVisible={true}
+            content={artifact.content}
+            language={artifact.language}
+            onClose={() => setArtifact(null)}
           />
         )}
       </View>

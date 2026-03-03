@@ -1,5 +1,11 @@
-import React, {useContext, useEffect, useState} from 'react';
-import {TouchableOpacity, View, Alert, SectionList} from 'react-native';
+import React, {useContext, useEffect, useMemo, useState} from 'react';
+import {
+  TouchableOpacity,
+  View,
+  Alert,
+  SectionList,
+  TextInput,
+} from 'react-native';
 import {observer} from 'mobx-react';
 import {Divider, Drawer, Text} from 'react-native-paper';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
@@ -13,9 +19,11 @@ import {Menu, RenameModal, Checkbox} from '..';
 import {
   BenchmarkIcon,
   ChatIcon,
+  CloseIcon,
   EditIcon,
   ModelIcon,
   PalIcon,
+  SearchIcon,
   SettingsIcon,
   ShareIcon,
   TrashIcon,
@@ -265,6 +273,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
     const [menuPosition, setMenuPosition] = useState({x: 0, y: 0});
     const [sessionToRename, setSessionToRename] =
       useState<SessionMetaData | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const theme = useTheme();
     const styles = createStyles(theme);
@@ -279,6 +288,21 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
         data: sessions,
       }),
     );
+
+    const filteredSections = useMemo(() => {
+      if (!searchQuery.trim()) {
+        return sections;
+      }
+      const q = searchQuery.toLowerCase();
+      return sections
+        .map(s => ({
+          ...s,
+          data: s.data.filter(sess =>
+            sess.title.toLowerCase().includes(q),
+          ),
+        }))
+        .filter(s => s.data.length > 0);
+    }, [sections, searchQuery]);
 
     useEffect(() => {
       chatSessionStore.loadSessionList();
@@ -571,6 +595,42 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
             styles.contentWrapper,
             {paddingTop: insets.top, paddingBottom: insets.bottom},
           ]}>
+          {/* Search Bar */}
+          {!chatSessionStore.isSelectionMode && (
+            <View
+              style={[
+                styles.searchContainer,
+                {borderColor: theme.colors.outlineVariant},
+              ]}>
+              <SearchIcon
+                width={16}
+                height={16}
+                stroke={theme.colors.onSurfaceVariant}
+              />
+              <TextInput
+                style={[styles.searchInput, {color: theme.colors.onSurface}]}
+                placeholder="Search chats..."
+                placeholderTextColor={theme.colors.onSurfaceVariant}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                clearButtonMode="while-editing"
+                returnKeyType="search"
+                accessibilityLabel="Search chat sessions"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery('')}
+                  hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                  <CloseIcon
+                    width={14}
+                    height={14}
+                    stroke={theme.colors.onSurfaceVariant}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
           {chatSessionStore.isSelectionMode ? (
             <>
               <SelectionModeHeader
@@ -594,7 +654,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
               />
               <Divider style={styles.selectAllDivider} />
               <SectionList
-                sections={sections}
+                sections={filteredSections}
                 keyExtractor={keyExtractor}
                 renderItem={renderItem}
                 renderSectionHeader={renderSectionHeader}
@@ -604,7 +664,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
             </>
           ) : (
             <SectionList
-              sections={sections}
+              sections={filteredSections}
               keyExtractor={keyExtractor}
               renderItem={renderItem}
               renderSectionHeader={renderSectionHeader}

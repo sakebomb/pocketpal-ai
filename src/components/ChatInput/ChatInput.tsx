@@ -71,6 +71,8 @@ export interface ChatInputTopLevelProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** When provided, shows a prompt library button in the input controls */
+  onPromptPickerPress?: () => void;
 }
 
 export interface ChatInputAdditionalProps {
@@ -88,6 +90,8 @@ export interface ChatInputAdditionalProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** When provided, shows a prompt library button in the input controls */
+  onPromptPickerPress?: () => void;
 }
 
 export type ChatInputProps = ChatInputTopLevelProps & ChatInputAdditionalProps;
@@ -95,6 +99,11 @@ export type ChatInputProps = ChatInputTopLevelProps & ChatInputAdditionalProps;
 const hapticOptions = {
   enableVibrateFallback: true,
   ignoreAndroidSystemSettings: false,
+};
+
+const estimateTokens = (txt: string): string => {
+  const n = Math.ceil(txt.length / 4);
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 };
 
 /** Bottom bar input component with a text input, attachment and
@@ -122,6 +131,7 @@ export const ChatInput = observer(
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
+    onPromptPickerPress,
   }: ChatInputProps) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
@@ -493,6 +503,21 @@ export const ChatInput = observer(
                 </Menu>
               )}
 
+              {/* Prompt Library Button */}
+              {onPromptPickerPress && !isVideoCapable && (
+                <TouchableOpacity
+                  style={styles.plusButton}
+                  onPress={onPromptPickerPress}
+                  accessibilityLabel="Prompt library"
+                  accessibilityRole="button">
+                  <IconButton
+                    icon="bookmark-outline"
+                    size={20}
+                    style={styles.promptLibraryIcon}
+                  />
+                </TouchableOpacity>
+              )}
+
               {/* Pal Selector */}
               <View style={styles.palSelector}>
                 <TouchableOpacity
@@ -582,6 +607,15 @@ export const ChatInput = observer(
 
             {/* Right Controls */}
             <View style={styles.rightControls}>
+              {/* Token estimate */}
+              {value.trim().length > 0 && (
+                <Text
+                  style={[styles.tokenEstimate, {color: onSurfaceColorVariant}]}
+                  accessibilityLabel={`Estimated tokens: ${estimateTokens(value)}`}>
+                  ~{estimateTokens(value)}
+                </Text>
+              )}
+
               {/* Helper text for model not loaded */}
               {showModelWarning && !hasActiveModel && (
                 <View style={styles.helperTextContainer}>
