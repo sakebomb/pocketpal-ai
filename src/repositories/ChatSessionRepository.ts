@@ -577,6 +577,27 @@ class ChatSessionRepository {
     });
   }
 
+  // Persist active fork map for a session (conversation branching)
+  async setSessionActiveForks(
+    sessionId: string,
+    forks: Record<string, number>,
+  ): Promise<void> {
+    const session = await database.collections
+      .get('chat_sessions')
+      .find(sessionId)
+      .catch(() => null);
+
+    if (!session) {
+      return;
+    }
+
+    await database.write(async () => {
+      await session.update((record: any) => {
+        record.active_forks_json = JSON.stringify(forks);
+      });
+    });
+  }
+
   // Toggle pinned state for a session, returns new pinned value
   async togglePinSession(sessionId: string): Promise<boolean> {
     const session = await database.collections

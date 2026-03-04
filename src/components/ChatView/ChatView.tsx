@@ -65,6 +65,7 @@ import {
   ChatEmptyPlaceholder,
   VideoPalEmptyPlaceholder,
   ContentReportSheet,
+  BranchNavigator,
 } from '..';
 import {
   AlertIcon,
@@ -722,6 +723,18 @@ export const ChatView = observer(
           message.type !== 'dateHeader' && !message.nextMessageInGroup;
         const showName = message.type !== 'dateHeader' && message.showName;
         const showStatus = message.type !== 'dateHeader' && message.showStatus;
+
+        // Branch navigator pseudo-message
+        if ((message as any).type === 'branchNavigator') {
+          const meta = (message as any).metadata;
+          return (
+            <BranchNavigator
+              branchGroupId={meta.branchGroupId}
+              currentIndex={meta.currentIndex}
+              totalBranches={meta.totalBranches}
+            />
+          );
+        }
 
         return (
           <View>

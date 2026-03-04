@@ -63,6 +63,8 @@ export const mockChatSessionStore = {
   exitEditMode: jest.fn(),
   enterEditMode: jest.fn(),
   removeMessagesFromId: jest.fn(),
+  createBranchAndRegenerate: jest.fn().mockResolvedValue(null),
+  navigateBranch: jest.fn().mockResolvedValue(undefined),
   setIsGenerating: jest.fn(),
   duplicateSession: jest.fn().mockResolvedValue(undefined),
   setNewChatCompletionSettings: jest.fn().mockResolvedValue(undefined),

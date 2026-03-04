@@ -63,7 +63,7 @@ export const useMessageActions = ({
               : undefined,
         });
       } else {
-        // If it's the assistant's message, find and resubmit the last user message
+        // If it's the assistant's message, branch and resubmit the user message
         const messageIndex = messages.findIndex(msg => msg.id === message.id);
         const previousMessage = messages
           .slice(messageIndex + 1)
@@ -72,17 +72,20 @@ export const useMessageActions = ({
           | undefined;
 
         if (previousMessage && previousMessage.text) {
-          const messageText = previousMessage.text;
-          const relatedImages = previousMessage.imageUris;
-          await chatSessionStore.removeMessagesFromId(previousMessage.id, true);
-          await handleSendPress({
-            text: messageText,
-            type: 'text',
-            imageUris:
-              relatedImages && relatedImages.length > 0
-                ? relatedImages
-                : undefined,
-          });
+          const result = await chatSessionStore.createBranchAndRegenerate(
+            message,
+            previousMessage,
+          );
+          if (result) {
+            await handleSendPress({
+              text: result.text,
+              type: 'text',
+              imageUris:
+                result.imageUris && result.imageUris.length > 0
+                  ? result.imageUris
+                  : undefined,
+            });
+          }
         }
       }
     },

@@ -7,6 +7,7 @@ import {CompletionParams} from '../utils/completionTypes';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
 import {palStore} from './PalStore';
+import {assistantId} from '../utils/chat';
 
 const NEW_SESSION_TITLE = 'New Session';
 const TITLE_LIMIT = 40;
@@ -23,6 +24,7 @@ export interface SessionMetaData {
   completionSettings: CompletionParams;
   activePalId?: string;
   pinned: boolean;
+  activeForks: Record<string, number>; // branchGroupId → active sibling index
   settingsSource: 'pal' | 'custom'; // Explicit choice: use pal settings or custom settings
   messagesLoaded?: boolean; // Track if messages are loaded for lazy loading
 }
@@ -67,6 +69,8 @@ class ChatSessionStore {
   selectedSessionIds: Set<string> = new Set();
   // Ephemeral draft text per session (not persisted)
   draftTexts: Map<string, string> = new Map();
+  // Pending branch info: set before handleSendPress during branch regeneration
+  pendingBranchInfo: {groupId: string; siblingIndex: number} | null = null;
 
   constructor() {
     makeAutoObservable(this);
@@ -181,6 +185,9 @@ class ChatSessionStore {
           completionSettings,
           activePalId: session.activePalId,
           pinned: session.pinned ?? false,
+          activeForks: session.activeForks_json
+            ? JSON.parse(session.activeForks_json)
+            : {},
           settingsSource: 'pal', // Default to pal settings for existing sessions
           messagesLoaded: false, // Mark as not loaded for lazy loading
         });
@@ -263,6 +270,9 @@ class ChatSessionStore {
 
       runInAction(() => {
         session.messages = messages;
+        session.activeForks = sessionData.session.activeForks_json
+          ? JSON.parse(sessionData.session.activeForks_json)
+          : {};
         session.messagesLoaded = true;
       });
     } catch (error) {
@@ -330,6 +340,41 @@ class ChatSessionStore {
     if (this.activeSessionId) {
       const session = this.sessions.find(s => s.id === this.activeSessionId);
       if (session) {
+        // Inject branch metadata when in a branched conversation
+        if (message.type === 'text') {
+          const activeForks = session.activeForks ?? {};
+          const isAssistant = message.author.id === assistantId;
+
+          if (this.pendingBranchInfo !== null) {
+            if (!isAssistant) {
+              // User message during branch regeneration — hide in UI, keep for LLM context
+              (message as MessageType.Text).metadata = {
+                ...((message as MessageType.Text).metadata ?? {}),
+                isBranchRedo: true,
+                branchContext: {...activeForks},
+              };
+            } else {
+              // First assistant message — tag with branch group + sibling index
+              const {groupId, siblingIndex} = this.pendingBranchInfo;
+              (message as MessageType.Text).metadata = {
+                ...((message as MessageType.Text).metadata ?? {}),
+                branchGroupId: groupId,
+                siblingIndex,
+                branchContext: {...activeForks},
+              };
+              runInAction(() => {
+                this.pendingBranchInfo = null;
+              });
+            }
+          } else if (Object.keys(activeForks).length > 0) {
+            // Normal message in a branched session — tag with current context
+            (message as MessageType.Text).metadata = {
+              ...((message as MessageType.Text).metadata ?? {}),
+              branchContext: {...activeForks},
+            };
+          }
+        }
+
         // Add to database
         const newMessage = await chatSessionRepository.addMessageToSession(
           this.activeSessionId,
@@ -354,15 +399,98 @@ class ChatSessionStore {
     if (this.activeSessionId) {
       const session = this.sessions.find(s => s.id === this.activeSessionId);
       if (session) {
+        let base = session.messages;
+
         if (this.isEditMode && this.editingMessageId) {
           const messageIndex = session.messages.findIndex(
             msg => msg.id === this.editingMessageId,
           );
           if (messageIndex >= 0) {
-            return session.messages.slice(messageIndex + 1);
+            base = session.messages.slice(messageIndex + 1);
           }
         }
-        return session.messages;
+
+        const activeForks = session.activeForks ?? {};
+
+        // No branching active — return as-is
+        if (Object.keys(activeForks).length === 0) {
+          return base;
+        }
+
+        // Filter messages to the active branch path
+        const filtered = base.filter(msg => {
+          const meta = (msg as MessageType.Text).metadata as
+            | Record<string, any>
+            | undefined;
+          if (!meta) {
+            return true;
+          }
+          if (meta.isBranchRedo) {
+            return false;
+          }
+          if (
+            meta.branchGroupId !== undefined &&
+            meta.siblingIndex !== undefined
+          ) {
+            const active = activeForks[meta.branchGroupId] ?? 0;
+            if (meta.siblingIndex !== active) {
+              return false;
+            }
+          }
+          if (meta.branchContext) {
+            for (const [gid, idx] of Object.entries(
+              meta.branchContext as Record<string, number>,
+            )) {
+              if ((activeForks[gid] ?? 0) !== idx) {
+                return false;
+              }
+            }
+          }
+          return true;
+        });
+
+        // Build branch sibling counts from all messages (including hidden ones)
+        const branchCounts: Record<string, number> = {};
+        for (const msg of session.messages) {
+          const meta = (msg as MessageType.Text).metadata as
+            | Record<string, any>
+            | undefined;
+          if (meta?.branchGroupId !== undefined) {
+            branchCounts[meta.branchGroupId] =
+              (branchCounts[meta.branchGroupId] ?? 0) + 1;
+          }
+        }
+
+        // Inject branch navigator pseudo-messages just below each visible branched response
+        const result: MessageType.Any[] = [];
+        for (const msg of filtered) {
+          const meta = (msg as MessageType.Text).metadata as
+            | Record<string, any>
+            | undefined;
+          if (
+            msg.type === 'text' &&
+            msg.author.id === assistantId &&
+            meta?.branchGroupId !== undefined
+          ) {
+            const gid = meta.branchGroupId as string;
+            const total = branchCounts[gid] ?? 1;
+            if (total > 1) {
+              result.push({
+                id: `branch-nav-${gid}`,
+                type: 'branchNavigator' as any,
+                author: msg.author,
+                createdAt: (msg.createdAt ?? 0) - 1,
+                metadata: {
+                  branchGroupId: gid,
+                  currentIndex: activeForks[gid] ?? 0,
+                  totalBranches: total,
+                },
+              });
+            }
+          }
+          result.push(msg);
+        }
+        return result;
       }
     }
     return [];
@@ -422,6 +550,7 @@ class ChatSessionStore {
         messages,
         completionSettings: settings,
         pinned: false,
+        activeForks: {},
         settingsSource: this.newChatSettingsSource, // Use the stored settings source choice
         messagesLoaded: true, // Mark as loaded since we have the messages
       };
@@ -832,6 +961,123 @@ class ChatSessionStore {
         }
       }
     }
+  }
+
+  /**
+   * Set up a branch: mark the current assistant response as branch 0, delete any
+   * messages newer than it, then prepare for the regenerated response (branch N).
+   * Returns the user message content to re-send.
+   */
+  async createBranchAndRegenerate(
+    assistantMessage: MessageType.Text,
+    userMessage: MessageType.Text,
+  ): Promise<{text: string; imageUris?: string[]} | null> {
+    if (!this.activeSessionId) {
+      return null;
+    }
+    const session = this.sessions.find(s => s.id === this.activeSessionId);
+    if (!session) {
+      return null;
+    }
+
+    const branchGroupId = userMessage.id;
+    const currentIndex = session.activeForks?.[branchGroupId] ?? 0;
+
+    // Count existing siblings to determine the new sibling index
+    const existingSiblings = session.messages.filter(
+      m =>
+        (m as MessageType.Text).metadata?.branchGroupId === branchGroupId,
+    );
+    const newSiblingIndex =
+      existingSiblings.length > 0 ? existingSiblings.length : 1;
+
+    // Mark this assistant message as branch currentIndex (or 0 if first time)
+    const siblingIndexForCurrent = existingSiblings.length > 0 ? currentIndex : 0;
+    await chatSessionRepository.updateMessage(assistantMessage.id, {
+      metadata: {
+        ...assistantMessage.metadata,
+        branchGroupId,
+        siblingIndex: siblingIndexForCurrent,
+      },
+    });
+
+    // Delete messages NEWER than the assistant response (subtree of this branch)
+    const assistantIndex = session.messages.findIndex(
+      m => m.id === assistantMessage.id,
+    );
+    if (assistantIndex > 0) {
+      const toDelete = session.messages.slice(0, assistantIndex);
+      for (const msg of toDelete) {
+        await chatSessionRepository.deleteMessage(msg.id);
+      }
+    }
+
+    // Update activeForks to point to the new branch
+    const newForks = {
+      ...(session.activeForks ?? {}),
+      [branchGroupId]: newSiblingIndex,
+    };
+    await chatSessionRepository.setSessionActiveForks(
+      this.activeSessionId,
+      newForks,
+    );
+
+    // Update in-memory state
+    const updatedSession = await chatSessionRepository.getSessionById(
+      this.activeSessionId,
+    );
+    runInAction(() => {
+      session.activeForks = newForks;
+      session.messages =
+        updatedSession?.messages?.map(m => m.toMessageObject()) || [];
+      this.pendingBranchInfo = {
+        groupId: branchGroupId,
+        siblingIndex: newSiblingIndex,
+      };
+    });
+
+    return {text: userMessage.text ?? '', imageUris: userMessage.imageUris};
+  }
+
+  /** Navigate to prev/next branch for a given branch group. */
+  async navigateBranch(
+    branchGroupId: string,
+    direction: 'prev' | 'next',
+  ): Promise<void> {
+    if (!this.activeSessionId) {
+      return;
+    }
+    const session = this.sessions.find(s => s.id === this.activeSessionId);
+    if (!session) {
+      return;
+    }
+
+    const total = session.messages.filter(
+      m =>
+        (m as MessageType.Text).metadata?.branchGroupId === branchGroupId,
+    ).length;
+    if (total <= 1) {
+      return;
+    }
+
+    const current = session.activeForks?.[branchGroupId] ?? 0;
+    const next =
+      direction === 'next'
+        ? Math.min(current + 1, total - 1)
+        : Math.max(current - 1, 0);
+
+    if (next === current) {
+      return;
+    }
+
+    const newForks = {...(session.activeForks ?? {}), [branchGroupId]: next};
+    await chatSessionRepository.setSessionActiveForks(
+      this.activeSessionId,
+      newForks,
+    );
+    runInAction(() => {
+      session.activeForks = newForks;
+    });
   }
 
   get activePalId(): string | undefined {

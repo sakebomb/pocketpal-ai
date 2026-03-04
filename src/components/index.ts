@@ -34,6 +34,7 @@ export * from './ModelsHeaderRight';
 export * from './ModelsResetDialog';
 export * from './PalGenerationSettingsSheet';
 export * from './QuickGenSettingsSheet';
+export * from './BranchNavigator';
 
 export * from './ModelSettingsSheet';
 export * from './ModelTypeTag';

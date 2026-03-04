@@ -16,6 +16,7 @@ export default class ChatSession extends Model {
   @text('date') date!: string;
   @text('active_pal_id') activePalId?: string;
   @field('pinned') pinned!: boolean;
+  @field('active_forks_json') activeForks_json?: string;
   @field('created_at') createdAt!: number;
   @field('updated_at') updatedAt!: number;
 }

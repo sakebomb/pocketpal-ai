@@ -193,5 +193,15 @@ export default schemaMigrations({
         }),
       ],
     },
+    // Migration to version 11: Add active_forks_json to chat_sessions for branching
+    {
+      toVersion: 11,
+      steps: [
+        addColumns({
+          table: 'chat_sessions',
+          columns: [{name: 'active_forks_json', type: 'string', isOptional: true}],
+        }),
+      ],
+    },
   ],
 });
