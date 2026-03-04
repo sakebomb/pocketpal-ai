@@ -137,7 +137,7 @@ describe('systemPromptResolver', () => {
   });
 
   describe('resolveSystemMessages', () => {
-    it('should return system message array when system prompt exists', () => {
+    it('should return system message with prompt + datetime when system prompt exists', () => {
       const pal: Partial<Pal> = {
         systemPrompt: 'You are a helpful assistant.',
         parameters: {},
@@ -145,24 +145,24 @@ describe('systemPromptResolver', () => {
 
       const result = resolveSystemMessages({pal: pal as Pal});
 
-      expect(result).toEqual([
-        {
-          role: 'system',
-          content: 'You are a helpful assistant.',
-        },
-      ]);
+      expect(result).toHaveLength(1);
+      expect(result[0].role).toBe('system');
+      expect(result[0].content).toContain('You are a helpful assistant.');
+      expect(result[0].content).toContain('Current date and time:');
     });
 
-    it('should return empty array when system prompt is empty', () => {
+    it('should return system message with datetime only when no system prompt', () => {
       const result = resolveSystemMessages({
         pal: null,
         model: null,
       });
 
-      expect(result).toEqual([]);
+      expect(result).toHaveLength(1);
+      expect(result[0].role).toBe('system');
+      expect(result[0].content).toContain('Current date and time:');
     });
 
-    it('should return empty array when system prompt is whitespace only', () => {
+    it('should return datetime-only message when system prompt is whitespace only', () => {
       const activeModel: Partial<Model> = {
         chatTemplate: {
           systemPrompt: '   \n\t  ',
@@ -179,10 +179,11 @@ describe('systemPromptResolver', () => {
         model: activeModel as Model,
       });
 
-      expect(result).toEqual([]);
+      expect(result).toHaveLength(1);
+      expect(result[0].content).toContain('Current date and time:');
     });
 
-    it('should return system message array for parametrized pal', () => {
+    it('should return system message with rendered prompt + datetime for parametrized pal', () => {
       const pal: Partial<Pal> = {
         systemPrompt: 'You are {{name}}, a {{role}}.',
         parameters: {
@@ -193,12 +194,10 @@ describe('systemPromptResolver', () => {
 
       const result = resolveSystemMessages({pal: pal as Pal});
 
-      expect(result).toEqual([
-        {
-          role: 'system',
-          content: 'You are Alice, a teacher.',
-        },
-      ]);
+      expect(result).toHaveLength(1);
+      expect(result[0].role).toBe('system');
+      expect(result[0].content).toContain('You are Alice, a teacher.');
+      expect(result[0].content).toContain('Current date and time:');
     });
   });
 });

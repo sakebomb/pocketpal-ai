@@ -207,16 +207,13 @@ describe('useChatSession', () => {
         await result.current.handleSendPress(textMessage);
       });
 
+      // System message is always included now (datetime is always injected)
+      expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
+      const systemMessage = capturedMessages.find(msg => msg.role === 'system');
+      expect(systemMessage.content).toContain('Current date and time:');
       if (shouldInclude && systemPrompt?.trim()) {
-        // Check that a system message was included in the messages passed to completion
-        expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
-        const systemMessage = capturedMessages.find(
-          msg => msg.role === 'system',
-        );
-        expect(systemMessage.content).toBe(systemPrompt);
-      } else {
-        // Check that no system message was included
-        expect(capturedMessages.some(msg => msg.role === 'system')).toBe(false);
+        // When a real system prompt exists, it should be in the content too
+        expect(systemMessage.content).toContain(systemPrompt);
       }
     },
   );
@@ -288,9 +285,10 @@ describe('useChatSession', () => {
     // Check that a system message was included with the rendered template
     expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
     const systemMessage = capturedMessages.find(msg => msg.role === 'system');
-    expect(systemMessage.content).toBe(
+    expect(systemMessage.content).toContain(
       'You are Gandalf, a wizard in Middle-earth.',
     );
+    expect(systemMessage.content).toContain('Current date and time:');
   });
 
   it('should save completionResult with reasoning_content after completion', async () => {
@@ -393,6 +391,7 @@ describe('useChatSession', () => {
     // Check that a system message was included with the original prompt
     expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
     const systemMessage = capturedMessages.find(msg => msg.role === 'system');
-    expect(systemMessage.content).toBe('You are a helpful assistant.');
+    expect(systemMessage.content).toContain('You are a helpful assistant.');
+    expect(systemMessage.content).toContain('Current date and time:');
   });
 });

@@ -38,22 +38,40 @@ export function resolveSystemPrompt(
 }
 
 /**
- * Resolves system prompt and formats it as a system message array
- * Returns empty array if no system prompt is available
+ * Returns the current date/time as a short injected line for the system prompt.
+ * Format: "Current date and time: Wednesday, March 4, 2026 at 10:30 AM"
+ */
+function buildDateTimeLine(): string {
+  return `Current date and time: ${new Date().toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })}.`;
+}
+
+/**
+ * Resolves system prompt and formats it as a system message array.
+ * Always appends the current date/time so the model can answer
+ * time-sensitive questions without a tool call.
  */
 export function resolveSystemMessages(
   dependencies: SystemPromptDependencies,
 ): Array<{role: 'system'; content: string}> {
   const systemPrompt = resolveSystemPrompt(dependencies);
+  const dateTimeLine = buildDateTimeLine();
 
-  if (!systemPrompt.trim()) {
-    return [];
-  }
+  const content = systemPrompt.trim()
+    ? `${systemPrompt}\n\n${dateTimeLine}`
+    : dateTimeLine;
 
   return [
     {
       role: 'system' as const,
-      content: systemPrompt,
+      content,
     },
   ];
 }
