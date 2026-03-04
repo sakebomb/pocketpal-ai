@@ -54,8 +54,9 @@ Implemented in `useChatSession.ts`. Key design:
 16. ✅ **Message search in chat** (#603) — UIStore `chatSearchQuery`, search icon in HeaderRight, filter bar in ChatView, match count
 17. ✅ **Draft autosave** (#604) — ChatSessionStore.draftTexts Map, save on switch/change, restore on activate, clear on send
 18. ✅ **Quick generation settings panel** (#605) — QuickGenSettingsSheet (temperature/top-p/max-tokens sliders), T: pill in ChatInput left controls
-19. **TTS output** — needs `react-native-tts` native dep
-20. **Voice input (STT)** — on-device Whisper
+19. ✅ **Generation presets** (#606) — PresetRepository + BUILT_IN_PRESETS (Precise/Balanced/Creative); preset chips in QuickGenSettingsSheet; custom presets persisted in DB v10
+20. **TTS output** — needs `react-native-tts` native dep
+21. **Voice input (STT)** — on-device Whisper
 
 ## Git / Repo Setup
 - Fork: `sakebomb/pocketpal-ai` (origin = git@github.com:sakebomb/pocketpal-ai.git)
@@ -70,7 +71,7 @@ Implemented in `useChatSession.ts`. Key design:
 - **Capability gating** — `tools` enables the loop; `web` adds web_search; `memory` adds memory_store + injects stored facts into system prompt
 - **Memory approach** — model-driven (model calls memory_store tool itself), not auto-extracted. Facts stored in WatermelonDB `memories` table per palId
 - **Web search** — Tavily API key stored in react-native-keychain via `ApiKeyStore`. Privacy disclaimer needed in PalSheet (TODO)
-- **DB versions** — currently v9. memories v6; documents+chunks v7; prompts v8; pinned sessions v9
+- **DB versions** — currently v10. memories v6; documents+chunks v7; prompts v8; pinned sessions v9; generation_presets v10
 - **RAG** — `documentRepository.getRelevantChunksForPal(palId, query)` → injected after memory block; keyword scoring in `documentChunker.ts`; always-on (no capability gate)
 - **Prompt library** — `PromptPickerSheet` opened via bookmark icon in ChatInput; `onPromptPickerPress` in `ChatInputAdditionalProps`; text injected via `initialInputText`/`onInitialTextConsumed` in ChatView/ChatScreen
 - **Streaming fix** — tool loop streams first call; if tools fire, clears partial text + continues silently; final answer set in one shot only when `hasExecutedAnyTool`

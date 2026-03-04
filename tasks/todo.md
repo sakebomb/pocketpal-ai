@@ -111,6 +111,13 @@
 - Saves to session via updateSessionCompletionSettings, marks session as 'custom'
 - Reset to defaults button
 
+### PR 14: Generation parameter presets (#606)
+- DB v10: generation_presets table (name, settings_json, created_at)
+- GenerationPreset model + PresetRepository (getAll/add/delete + BUILT_IN_PRESETS)
+- Built-ins: Precise (0.2/0.9/1024), Balanced (0.7/0.95/1024), Creative (1.2/0.98/2048)
+- QuickGenSettingsSheet: horizontal chip row at top, tap to load preset into sliders
+- Long-press custom preset to delete; "+" Save chip with inline name input
+
 ## Pending
 
 ### Blocked: TTS output (H)
