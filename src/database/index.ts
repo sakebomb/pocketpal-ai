@@ -15,6 +15,7 @@ import {
   Document,
   DocumentChunk,
   Prompt,
+  GenerationPreset,
 } from './models';
 
 const adapter = new SQLiteAdapter({
@@ -42,6 +43,7 @@ export const database = new Database({
     Document,
     DocumentChunk,
     Prompt,
+    GenerationPreset,
   ],
 });
 
@@ -58,4 +60,5 @@ export {
   Document,
   DocumentChunk,
   Prompt,
+  GenerationPreset,
 };

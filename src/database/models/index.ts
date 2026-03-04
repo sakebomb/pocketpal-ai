@@ -10,6 +10,7 @@ import {Memory} from './Memory';
 import {Document} from './Document';
 import {DocumentChunk} from './DocumentChunk';
 import {Prompt} from './Prompt';
+import {GenerationPreset} from './GenerationPreset';
 
 export {
   ChatSession,
@@ -24,4 +25,5 @@ export {
   Document,
   DocumentChunk,
   Prompt,
+  GenerationPreset,
 };

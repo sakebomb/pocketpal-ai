@@ -179,5 +179,19 @@ export default schemaMigrations({
         }),
       ],
     },
+    // Migration to version 10: Add generation_presets table
+    {
+      toVersion: 10,
+      steps: [
+        createTable({
+          name: 'generation_presets',
+          columns: [
+            {name: 'name', type: 'string'},
+            {name: 'settings_json', type: 'string'},
+            {name: 'created_at', type: 'number'},
+          ],
+        }),
+      ],
+    },
   ],
 });

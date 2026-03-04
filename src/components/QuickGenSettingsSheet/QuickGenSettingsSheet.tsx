@@ -1,12 +1,22 @@
-import React, {useEffect, useState} from 'react';
-import {View, StyleSheet} from 'react-native';
-import {Button, Text} from 'react-native-paper';
+import React, {useEffect, useState, useCallback} from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
+import {Button, Text, TextInput} from 'react-native-paper';
 
 import {Sheet} from '../Sheet/Sheet';
 import {InputSlider} from '../InputSlider';
 import {chatSessionStore, defaultCompletionSettings} from '../../store';
 import {CompletionParams} from '../../utils/completionTypes';
 import {useTheme} from '../../hooks';
+import {
+  presetRepository,
+  PresetInfo,
+} from '../../repositories/PresetRepository';
 
 interface QuickGenSettingsSheetProps {
   isVisible: boolean;
@@ -36,7 +46,16 @@ export const QuickGenSettingsSheet: React.FC<QuickGenSettingsSheetProps> = ({
     sourceSettings.n_predict ?? 1024,
   );
 
-  // Sync when sheet opens or session changes
+  const [presets, setPresets] = useState<PresetInfo[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveNameInput, setSaveNameInput] = useState('');
+
+  const loadPresets = useCallback(async () => {
+    const all = await presetRepository.getAllPresets();
+    setPresets(all);
+  }, []);
+
+  // Sync sliders and load presets when sheet opens or session changes
   useEffect(() => {
     if (isVisible) {
       const s =
@@ -48,8 +67,46 @@ export const QuickGenSettingsSheet: React.FC<QuickGenSettingsSheetProps> = ({
       setTemperature(s?.temperature ?? defaultCompletionSettings.temperature ?? 0.7);
       setTopP(s?.top_p ?? defaultCompletionSettings.top_p ?? 0.95);
       setMaxTokens(s?.n_predict ?? defaultCompletionSettings.n_predict ?? 1024);
+      setIsSaving(false);
+      setSaveNameInput('');
+      loadPresets();
     }
   }, [isVisible, chatSessionStore.activeSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const applyPreset = (preset: PresetInfo) => {
+    setTemperature(preset.settings.temperature);
+    setTopP(preset.settings.top_p);
+    setMaxTokens(preset.settings.n_predict);
+  };
+
+  const handleSavePreset = async () => {
+    const name = saveNameInput.trim();
+    if (!name) {
+      return;
+    }
+    await presetRepository.addPreset(name, {
+      temperature,
+      top_p: topP,
+      n_predict: maxTokens,
+    });
+    setSaveNameInput('');
+    setIsSaving(false);
+    await loadPresets();
+  };
+
+  const handleDeletePreset = (preset: PresetInfo) => {
+    Alert.alert('Delete preset', `Delete "${preset.name}"?`, [
+      {text: 'Cancel', style: 'cancel'},
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await presetRepository.deletePreset(preset.id);
+          await loadPresets();
+        },
+      },
+    ]);
+  };
 
   const handleSave = async () => {
     const updated: CompletionParams = {
@@ -72,6 +129,76 @@ export const QuickGenSettingsSheet: React.FC<QuickGenSettingsSheetProps> = ({
     <Sheet title="Generation Settings" isVisible={isVisible} onClose={onClose}>
       <Sheet.ScrollView bottomOffset={16}>
         <View style={styles.content}>
+          {/* Preset chips */}
+          <Text
+            style={[styles.sectionLabel, {color: theme.colors.onSurfaceVariant}]}>
+            Presets
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.presetsRow}
+            contentContainerStyle={styles.presetsContent}>
+            {presets.map(preset => (
+              <TouchableOpacity
+                key={preset.id}
+                style={[
+                  styles.presetChip,
+                  {
+                    borderColor: theme.colors.outline,
+                    backgroundColor: theme.colors.surfaceVariant,
+                  },
+                ]}
+                onPress={() => applyPreset(preset)}
+                onLongPress={() =>
+                  !preset.builtIn && handleDeletePreset(preset)
+                }>
+                <Text
+                  style={[
+                    styles.presetChipText,
+                    {color: theme.colors.onSurfaceVariant},
+                  ]}>
+                  {preset.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[
+                styles.presetChip,
+                styles.addChip,
+                {borderColor: theme.colors.primary},
+              ]}
+              onPress={() => setIsSaving(v => !v)}>
+              <Text style={[styles.presetChipText, {color: theme.colors.primary}]}>
+                + Save
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+
+          {isSaving && (
+            <View style={styles.saveRow}>
+              <TextInput
+                mode="outlined"
+                dense
+                placeholder="Preset name"
+                value={saveNameInput}
+                onChangeText={setSaveNameInput}
+                style={styles.saveInput}
+                autoFocus
+              />
+              <Button
+                mode="contained"
+                compact
+                disabled={!saveNameInput.trim()}
+                onPress={handleSavePreset}
+                buttonColor={theme.colors.primary}>
+                Save
+              </Button>
+            </View>
+          )}
+
+          <View style={styles.divider} />
+
           <InputSlider
             label="Temperature"
             description="Controls randomness. Lower = more focused, higher = more creative."
@@ -134,6 +261,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 16,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  presetsRow: {
+    flexGrow: 0,
+  },
+  presetsContent: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  presetChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  addChip: {
+    borderStyle: 'dashed',
+  },
+  presetChipText: {
+    fontSize: 13,
+  },
+  saveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+  },
+  saveInput: {
+    flex: 1,
+    fontSize: 14,
   },
   divider: {
     height: 16,

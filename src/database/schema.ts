@@ -1,7 +1,7 @@
 import {appSchema, tableSchema} from '@nozbe/watermelondb';
 
 export default appSchema({
-  version: 9,
+  version: 10,
   tables: [
     tableSchema({
       name: 'chat_sessions',
@@ -163,6 +163,15 @@ export default appSchema({
       columns: [
         {name: 'title', type: 'string'},
         {name: 'content', type: 'string'},
+        {name: 'created_at', type: 'number'},
+      ],
+    }),
+    // Named generation parameter presets
+    tableSchema({
+      name: 'generation_presets',
+      columns: [
+        {name: 'name', type: 'string'},
+        {name: 'settings_json', type: 'string'}, // JSON: {temperature, top_p, n_predict}
         {name: 'created_at', type: 'number'},
       ],
     }),
