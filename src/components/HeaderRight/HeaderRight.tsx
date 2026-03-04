@@ -6,6 +6,7 @@ import {IconButton, useTheme} from 'react-native-paper';
 
 import {
   // ClockFastForwardIcon,
+  AtomIcon,
   CloseIcon,
   DotsVerticalIcon,
   DuplicateIcon,
@@ -35,12 +36,15 @@ import {
 
 import {RenameModal, UsageStats} from '..';
 import {ChatGenerationSettingsSheet} from '..';
+import {ComparisonSheet} from '..';
 
 export const HeaderRight: React.FC = observer(() => {
   const theme = useTheme();
   const [menuVisible, setMenuVisible] = React.useState(false);
   const [renameModalVisible, setRenameModalVisible] = React.useState(false);
   const [chatGenerationSettingsVisible, setChatGenerationSettingsVisible] =
+    React.useState(false);
+  const [comparisonSheetVisible, setComparisonSheetVisible] =
     React.useState(false);
 
   const openMenu = () => {
@@ -215,6 +219,15 @@ export const HeaderRight: React.FC = observer(() => {
           label={l10n.components.headerRight.model}
           leadingIcon={() => <GridIcon stroke={theme.colors.primary} />}
         />
+        <Menu.Item
+          disabled={models.length < 2}
+          onPress={() => {
+            setComparisonSheetVisible(true);
+            closeMenu();
+          }}
+          label="Compare models"
+          leadingIcon={() => <AtomIcon stroke={theme.colors.primary} />}
+        />
         {session?.id && (
           <>
             <Menu.Separator />
@@ -278,6 +291,10 @@ export const HeaderRight: React.FC = observer(() => {
       <ChatGenerationSettingsSheet
         isVisible={chatGenerationSettingsVisible}
         onClose={() => setChatGenerationSettingsVisible(false)}
+      />
+      <ComparisonSheet
+        isVisible={comparisonSheetVisible}
+        onClose={() => setComparisonSheetVisible(false)}
       />
       {session && (
         <RenameModal
