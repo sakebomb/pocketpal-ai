@@ -65,6 +65,8 @@ class ChatSessionStore {
   // Selection mode state
   isSelectionMode: boolean = false;
   selectedSessionIds: Set<string> = new Set();
+  // Ephemeral draft text per session (not persisted)
+  draftTexts: Map<string, string> = new Map();
 
   constructor() {
     makeAutoObservable(this);
@@ -892,6 +894,21 @@ class ChatSessionStore {
     runInAction(() => {
       this.selectedSessionIds.clear();
     });
+  }
+
+  // Draft autosave actions (ephemeral, per-session, not persisted)
+  setDraft(sessionId: string, text: string) {
+    runInAction(() => {
+      if (text) {
+        this.draftTexts.set(sessionId, text);
+      } else {
+        this.draftTexts.delete(sessionId);
+      }
+    });
+  }
+
+  getDraft(sessionId: string): string {
+    return this.draftTexts.get(sessionId) ?? '';
   }
 
   async bulkDeleteSessions(): Promise<void> {

@@ -374,10 +374,19 @@ export const ChatView = observer(
     // ============ SEARCH FILTERING ============
     const searchQuery = uiStore.chatSearchQuery;
 
-    // Clear search when session changes
+    // On session change: save draft for previous session, restore for new session, clear search
     React.useEffect(() => {
+      // Save current input as draft for the session we're leaving
+      if (previousSessionId !== undefined) {
+        chatSessionStore.setDraft(previousSessionId ?? '', inputTextRef.current);
+      }
+      // Restore draft for the session we're entering
+      const draft = chatSessionStore.activeSessionId
+        ? chatSessionStore.getDraft(chatSessionStore.activeSessionId)
+        : '';
+      setInputText(draft);
       uiStore.setChatSearch(null);
-    }, [chatSessionStore.activeSessionId]);
+    }, [chatSessionStore.activeSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const filteredMessages = React.useMemo(() => {
       if (!searchQuery) return messages;
@@ -400,6 +409,12 @@ export const ChatView = observer(
     });
 
     const previousChatMessages = usePrevious(chatMessages);
+    const previousSessionId = usePrevious(chatSessionStore.activeSessionId);
+
+    // ============ DRAFT AUTOSAVE ============
+    // Track latest inputText in a ref so the session-change effect can read it without a stale closure
+    const inputTextRef = React.useRef(inputText);
+    inputTextRef.current = inputText;
 
     // ============ MESSAGE INPUT HANDLERS ============
     const wrappedOnSendPress = React.useCallback(
@@ -409,6 +424,9 @@ export const ChatView = observer(
         }
         onSendPress(message);
         setInputText('');
+        if (chatSessionStore.activeSessionId) {
+          chatSessionStore.setDraft(chatSessionStore.activeSessionId, '');
+        }
         Keyboard.dismiss();
       },
       [onSendPress],
@@ -1000,7 +1018,15 @@ export const ChatView = observer(
                     // Only override value and onChangeText if not using promptText
                     ...(!(activePal && hasVideoCapability(activePal)) && {
                       value: inputText,
-                      onChangeText: setInputText,
+                      onChangeText: (text: string) => {
+                        setInputText(text);
+                        if (chatSessionStore.activeSessionId) {
+                          chatSessionStore.setDraft(
+                            chatSessionStore.activeSessionId,
+                            text,
+                          );
+                        }
+                      },
                     }),
                   },
                 }}

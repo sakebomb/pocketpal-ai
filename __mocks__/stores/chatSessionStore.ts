@@ -36,6 +36,10 @@ export const mockChatSessionStore = {
   // Selection mode state
   isSelectionMode: false,
   selectedSessionIds: new Set<string>(),
+  // Draft autosave
+  draftTexts: new Map<string, string>(),
+  setDraft: jest.fn(),
+  getDraft: jest.fn().mockReturnValue(''),
   loadSessionList: jest.fn().mockResolvedValue(undefined),
   loadGlobalSettings: jest.fn().mockResolvedValue(undefined),
   deleteSession: jest.fn().mockResolvedValue(undefined),
