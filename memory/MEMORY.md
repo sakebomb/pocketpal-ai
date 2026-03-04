@@ -70,7 +70,7 @@ Implemented in `useChatSession.ts`. Key design:
 - **Capability gating** — `tools` enables the loop; `web` adds web_search; `memory` adds memory_store + injects stored facts into system prompt
 - **Memory approach** — model-driven (model calls memory_store tool itself), not auto-extracted. Facts stored in WatermelonDB `memories` table per palId
 - **Web search** — Tavily API key stored in react-native-keychain via `ApiKeyStore`. Privacy disclaimer needed in PalSheet (TODO)
-- **DB versions** — currently v8. memories v6; documents+chunks v7; prompts v8
+- **DB versions** — currently v9. memories v6; documents+chunks v7; prompts v8; pinned sessions v9
 - **RAG** — `documentRepository.getRelevantChunksForPal(palId, query)` → injected after memory block; keyword scoring in `documentChunker.ts`; always-on (no capability gate)
 - **Prompt library** — `PromptPickerSheet` opened via bookmark icon in ChatInput; `onPromptPickerPress` in `ChatInputAdditionalProps`; text injected via `initialInputText`/`onInitialTextConsumed` in ChatView/ChatScreen
 - **Streaming fix** — tool loop streams first call; if tools fire, clears partial text + continues silently; final answer set in one shot only when `hasExecutedAnyTool`
