@@ -33,6 +33,7 @@ export * from './Message';
 export * from './ModelsHeaderRight';
 export * from './ModelsResetDialog';
 export * from './PalGenerationSettingsSheet';
+export * from './QuickGenSettingsSheet';
 
 export * from './ModelSettingsSheet';
 export * from './ModelTypeTag';

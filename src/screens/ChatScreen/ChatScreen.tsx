@@ -11,6 +11,7 @@ import {
 } from '../../components';
 import {PalSheet} from '../../components/PalsSheets';
 import {PromptPickerSheet} from '../../components/PromptPickerSheet';
+import {QuickGenSettingsSheet} from '../../components/QuickGenSettingsSheet';
 
 import {useChatSession} from '../../hooks';
 import {usePendingMessage} from '../../hooks/useDeepLinking';
@@ -65,6 +66,9 @@ export const ChatScreen: React.FC = observer(() => {
   // State for prompt picker
   const [isPromptPickerVisible, setIsPromptPickerVisible] = useState(false);
   const [injectedPromptText, setInjectedPromptText] = useState<string | null>(null);
+
+  // State for quick generation settings panel
+  const [isGenSettingsVisible, setIsGenSettingsVisible] = useState(false);
 
   // State for model error report sheet
   const [isErrorReportVisible, setIsErrorReportVisible] = useState(false);
@@ -193,6 +197,9 @@ export const ChatScreen: React.FC = observer(() => {
           isThinkingEnabled: thinkingEnabled,
           onThinkingToggle: handleThinkingToggle,
           onPromptPickerPress: handleOpenPromptPicker,
+          onGenSettingsPress: chatSessionStore.activeSessionId
+            ? () => setIsGenSettingsVisible(true)
+            : undefined,
         }}
         textInputProps={{
           placeholder: !modelStore.context
@@ -256,6 +263,10 @@ export const ChatScreen: React.FC = observer(() => {
         isVisible={isPromptPickerVisible}
         onClose={() => setIsPromptPickerVisible(false)}
         onSelect={handlePromptSelect}
+      />
+      <QuickGenSettingsSheet
+        isVisible={isGenSettingsVisible}
+        onClose={() => setIsGenSettingsVisible(false)}
       />
     </>
   );
