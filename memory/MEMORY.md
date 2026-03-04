@@ -50,8 +50,20 @@ Implemented in `useChatSession.ts`. Key design:
 12. ✅ **Token estimate** — `estimateTokens()` (~4 chars/token) shown as `~Xk` in ChatInput rightControls while typing
 13. ✅ **Pal templates** — `PAL_TEMPLATES` (5 built-ins) in pal-templates.ts; "From Template" submenu in AddPalMenu
 14. ✅ **Session search** — search bar in SidebarContent with `filteredSections` useMemo filter
-15. **TTS output** — needs `react-native-tts` native dep
-16. **Voice input (STT)** — on-device Whisper
+15. ✅ **Pinned sessions** (#602) — DB v9, `pinned` boolean on chat_sessions, migration v8→v9; `pinnedSessions` getter + `togglePinSession` in ChatSessionStore; Pinned section in SidebarContent above date groups; Pin/Unpin in long-press menu (StarIcon)
+16. ✅ **Message search in chat** (#603) — UIStore `chatSearchQuery`, search icon in HeaderRight, filter bar in ChatView, match count
+17. ✅ **Draft autosave** (#604) — ChatSessionStore.draftTexts Map, save on switch/change, restore on activate, clear on send
+18. ✅ **Quick generation settings panel** (#605) — QuickGenSettingsSheet (temperature/top-p/max-tokens sliders), T: pill in ChatInput left controls
+19. **TTS output** — needs `react-native-tts` native dep
+20. **Voice input (STT)** — on-device Whisper
+
+## Git / Repo Setup
+- Fork: `sakebomb/pocketpal-ai` (origin = git@github.com:sakebomb/pocketpal-ai.git)
+- Upstream: `a-ghorbani/pocketpal-ai` (upstream remote, pull-only)
+- Working branch: `dev` — all parity work accumulates here (Option B / single dev branch)
+- Feature branch flow: `feat/<name>` → squash-merge into `dev` → push `dev`
+- Pull upstream: `git fetch upstream && git rebase upstream/main && git push origin dev --force-with-lease`
+- DB schema currently at **v9** (pinned sessions)
 
 ## Architecture Notes
 - **Tool framework** — pluggable registry in `src/utils/tools/registry.ts`. Add a tool: add to REGISTRY or use factory for pal-scoped tools (memory_store pattern)

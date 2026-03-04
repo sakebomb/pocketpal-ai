@@ -89,11 +89,32 @@
 - Pal templates: pal-templates.ts — PAL_TEMPLATES array (5 built-ins: Coding, Writing, Research, Brainstorm, Language Tutor); AddPalMenu: "From Template" submenu; BottomActionBar + PalsScreen wired via onCreateFromTemplate
 - Session search: SidebarContent.tsx — searchQuery state, filteredSections useMemo, search TextInput with SearchIcon/CloseIcon above session list; searchContainer/searchInput styles in styles.ts
 
+## Completed
+
+### PR 11: Message search within a chat (#603)
+- UIStore: chatSearchQuery observable (null=off, string=query) + setChatSearch action
+- HeaderRight: search icon button; shows X when active, toggles uiStore.chatSearchQuery
+- ChatView: search bar below header (autoFocus TextInput + match count); filters raw messages before calculateChatMessages; clears on session change
+- jest.config.js + __mocks__/external/react-native-webview.js: mock added, unblocks all test suites
+
+## Completed
+
+### PR 12: Draft autosave (#604)
+- ChatSessionStore.draftTexts: Map<sessionId, text> (ephemeral, MobX-observed)
+- Session switch: saves outgoing draft, restores incoming
+- Send: clears draft
+- onChangeText in ChatView keeps draft in sync
+
+### PR 13: Quick generation settings panel (#605)
+- QuickGenSettingsSheet: compact Sheet with InputSlider for temperature/top-p/max-tokens
+- Temperature pill in ChatInput left controls (shows T: X.X, only when session active + model loaded)
+- Saves to session via updateSessionCompletionSettings, marks session as 'custom'
+- Reset to defaults button
+
 ## Pending
 
 ### Blocked: TTS output (H)
 - Needs `react-native-tts` native dep
-- Auto-read assistant responses aloud, with stop button
 
 ### Future: Voice input / STT (I)
 - On-device Whisper via llama.rn audio pipeline
