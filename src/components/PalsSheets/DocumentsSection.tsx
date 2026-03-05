@@ -17,6 +17,7 @@ import {
 } from '@react-native-documents/picker';
 import {Button} from 'react-native-paper';
 
+import {useTheme} from '../../hooks';
 import type {DocumentInfo} from '../../repositories/DocumentRepository';
 import {documentRepository} from '../../repositories/DocumentRepository';
 
@@ -27,6 +28,7 @@ interface DocumentsSectionProps {
 }
 
 export const DocumentsSection: React.FC<DocumentsSectionProps> = ({palId}) => {
+  const theme = useTheme();
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,8 +129,8 @@ export const DocumentsSection: React.FC<DocumentsSectionProps> = ({palId}) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Documents</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, {color: theme.colors.onSurface}]}>Documents</Text>
+          <Text style={[styles.subtitle, {color: theme.colors.onSurfaceVariant}]}>
             Relevant chunks are injected into context when you chat
           </Text>
         </View>
@@ -141,20 +143,20 @@ export const DocumentsSection: React.FC<DocumentsSectionProps> = ({palId}) => {
         )}
       </View>
 
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? <Text style={[styles.errorText, {color: theme.colors.error}]}>{error}</Text> : null}
 
       {documents.length === 0 ? (
-        <Text style={styles.emptyText}>No documents attached</Text>
+        <Text style={[styles.emptyText, {color: theme.colors.onSurfaceVariant}]}>No documents attached</Text>
       ) : (
         documents.map(doc => (
-          <View key={doc.id} style={styles.docRow}>
-            <Text style={styles.docName} numberOfLines={1}>
+          <View key={doc.id} style={[styles.docRow, {borderBottomColor: theme.colors.outlineVariant}]}>
+            <Text style={[styles.docName, {color: theme.colors.onSurface}]} numberOfLines={1}>
               {doc.name}
             </Text>
             <TouchableOpacity
               onPress={() => handleDeleteDocument(doc)}
               hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-              <Text style={styles.deleteButton}>✕</Text>
+              <Text style={[styles.deleteButton, {color: theme.colors.onSurfaceVariant}]}>✕</Text>
             </TouchableOpacity>
           </View>
         ))
@@ -180,7 +182,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 12,
-    color: '#888',
     marginTop: 2,
   },
   spinner: {
@@ -188,13 +189,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 12,
-    color: '#aaa',
     fontStyle: 'italic',
     paddingVertical: 4,
   },
   errorText: {
     fontSize: 12,
-    color: '#c00',
     paddingVertical: 4,
   },
   docRow: {
@@ -203,16 +202,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e0e0e0',
   },
   docName: {
     flex: 1,
     fontSize: 13,
-    color: '#333',
     marginRight: 12,
   },
   deleteButton: {
     fontSize: 14,
-    color: '#888',
   },
 });

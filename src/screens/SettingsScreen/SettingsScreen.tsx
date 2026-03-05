@@ -86,6 +86,14 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
   const [tavilyKeyInput, setTavilyKeyInput] = useState('');
   const [tavilyKeyVisible, setTavilyKeyVisible] = useState(false);
+  const [braveKeyInput, setBraveKeyInput] = useState('');
+  const [braveKeyVisible, setBraveKeyVisible] = useState(false);
+  const [serperKeyInput, setSerperKeyInput] = useState('');
+  const [serperKeyVisible, setSerperKeyVisible] = useState(false);
+  const [omdbKeyInput, setOmdbKeyInput] = useState('');
+  const [omdbKeyVisible, setOmdbKeyVisible] = useState(false);
+  const [aviationstackKeyInput, setAviationstackKeyInput] = useState('');
+  const [aviationstackKeyVisible, setAviationstackKeyVisible] = useState(false);
   const [gpuSupported, setGpuSupported] = useState(false);
   const [keyCacheAnchor, setKeyCacheAnchor] = useState<{x: number; y: number}>({
     x: 0,
@@ -1200,6 +1208,210 @@ export const SettingsScreen: React.FC = observer(() => {
                       await apiKeyStore.clearTavilyApiKey();
                       setTavilyKeyInput('');
                     }}>
+                    Remove
+                  </Button>
+                )}
+              </View>
+
+              <View style={[styles.settingItemContainer, {marginTop: 16}]}>
+                <View style={styles.textContainer}>
+                  <Text variant="titleMedium" style={styles.textLabel}>
+                    Brave Web Search
+                  </Text>
+                  <Text variant="labelSmall" style={styles.textDescription}>
+                    {apiKeyStore.hasBraveKey
+                      ? 'API key saved. Brave Search is active for Pals with the Brave capability.'
+                      : 'Add a Brave Search API key to enable web search in Pals. Get a free key at brave.com/search/api.'}
+                  </Text>
+                </View>
+              </View>
+              <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
+                <TextInput
+                  style={{flex: 1}}
+                  value={braveKeyInput}
+                  onChangeText={setBraveKeyInput}
+                  placeholder={
+                    apiKeyStore.hasBraveKey ? '••••••••••••••••' : 'BSA...'
+                  }
+                  secureTextEntry={!braveKeyVisible}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Button
+                  mode="text"
+                  compact
+                  onPress={() => setBraveKeyVisible(v => !v)}>
+                  {braveKeyVisible ? 'Hide' : 'Show'}
+                </Button>
+              </View>
+              <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
+                <Button
+                  mode="outlined"
+                  disabled={!braveKeyInput.trim()}
+                  onPress={async () => {
+                    await apiKeyStore.setBraveApiKey(braveKeyInput.trim());
+                    setBraveKeyInput('');
+                    setBraveKeyVisible(false);
+                  }}>
+                  Save Key
+                </Button>
+                {apiKeyStore.hasBraveKey && (
+                  <Button
+                    mode="text"
+                    onPress={async () => {
+                      await apiKeyStore.clearBraveApiKey();
+                      setBraveKeyInput('');
+                    }}>
+                    Remove
+                  </Button>
+                )}
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* Serper API Key */}
+          <Card style={styles.card}>
+            <Card.Content>
+              <View style={{flexDirection: 'row', alignItems: 'center', gap: 12}}>
+                <View style={{flex: 1}}>
+                  <Text variant="titleSmall">Serper (Google Search)</Text>
+                  <Text variant="labelSmall" style={styles.textDescription}>
+                    {apiKeyStore.hasSerperKey
+                      ? 'API key saved. Serper search is active for Pals with the Serper capability.'
+                      : 'Add a Serper API key to enable Google search in Pals. Get a free key at serper.dev.'}
+                  </Text>
+                </View>
+              </View>
+              <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
+                <TextInput
+                  style={{flex: 1}}
+                  value={serperKeyInput}
+                  onChangeText={setSerperKeyInput}
+                  placeholder={apiKeyStore.hasSerperKey ? '••••••••••••••••' : 'Enter Serper API key...'}
+                  secureTextEntry={!serperKeyVisible}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Button mode="text" compact onPress={() => setSerperKeyVisible(v => !v)}>
+                  {serperKeyVisible ? 'Hide' : 'Show'}
+                </Button>
+              </View>
+              <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
+                <Button
+                  mode="outlined"
+                  disabled={!serperKeyInput.trim()}
+                  onPress={async () => {
+                    await apiKeyStore.setSerperApiKey(serperKeyInput.trim());
+                    setSerperKeyInput('');
+                    setSerperKeyVisible(false);
+                  }}>
+                  Save Key
+                </Button>
+                {apiKeyStore.hasSerperKey && (
+                  <Button mode="text" onPress={async () => {
+                    await apiKeyStore.clearSerperApiKey();
+                    setSerperKeyInput('');
+                  }}>
+                    Remove
+                  </Button>
+                )}
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* OMDB API Key */}
+          <Card style={styles.card}>
+            <Card.Content>
+              <View style={{flexDirection: 'row', alignItems: 'center', gap: 12}}>
+                <View style={{flex: 1}}>
+                  <Text variant="titleSmall">OMDB (Movies & TV)</Text>
+                  <Text variant="labelSmall" style={styles.textDescription}>
+                    {apiKeyStore.hasOmdbKey
+                      ? 'API key saved. Movie & TV search is active for Pals with the Movies capability.'
+                      : 'Add a free OMDB API key to enable movie/TV lookups. Get one at omdbapi.com.'}
+                  </Text>
+                </View>
+              </View>
+              <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
+                <TextInput
+                  style={{flex: 1}}
+                  value={omdbKeyInput}
+                  onChangeText={setOmdbKeyInput}
+                  placeholder={apiKeyStore.hasOmdbKey ? '••••••••••••••••' : 'Enter OMDB API key...'}
+                  secureTextEntry={!omdbKeyVisible}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Button mode="text" compact onPress={() => setOmdbKeyVisible(v => !v)}>
+                  {omdbKeyVisible ? 'Hide' : 'Show'}
+                </Button>
+              </View>
+              <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
+                <Button
+                  mode="outlined"
+                  disabled={!omdbKeyInput.trim()}
+                  onPress={async () => {
+                    await apiKeyStore.setOmdbApiKey(omdbKeyInput.trim());
+                    setOmdbKeyInput('');
+                    setOmdbKeyVisible(false);
+                  }}>
+                  Save Key
+                </Button>
+                {apiKeyStore.hasOmdbKey && (
+                  <Button mode="text" onPress={async () => {
+                    await apiKeyStore.clearOmdbApiKey();
+                    setOmdbKeyInput('');
+                  }}>
+                    Remove
+                  </Button>
+                )}
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* AviationStack API Key */}
+          <Card style={styles.card}>
+            <Card.Content>
+              <View style={{flexDirection: 'row', alignItems: 'center', gap: 12}}>
+                <View style={{flex: 1}}>
+                  <Text variant="titleSmall">AviationStack (Flights)</Text>
+                  <Text variant="labelSmall" style={styles.textDescription}>
+                    {apiKeyStore.hasAviationstackKey
+                      ? 'API key saved. Flight tracking is active for Pals with the Flights capability.'
+                      : 'Add an AviationStack API key to enable flight tracking. Free tier at aviationstack.com.'}
+                  </Text>
+                </View>
+              </View>
+              <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
+                <TextInput
+                  style={{flex: 1}}
+                  value={aviationstackKeyInput}
+                  onChangeText={setAviationstackKeyInput}
+                  placeholder={apiKeyStore.hasAviationstackKey ? '••••••••••••••••' : 'Enter AviationStack API key...'}
+                  secureTextEntry={!aviationstackKeyVisible}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Button mode="text" compact onPress={() => setAviationstackKeyVisible(v => !v)}>
+                  {aviationstackKeyVisible ? 'Hide' : 'Show'}
+                </Button>
+              </View>
+              <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
+                <Button
+                  mode="outlined"
+                  disabled={!aviationstackKeyInput.trim()}
+                  onPress={async () => {
+                    await apiKeyStore.setAviationstackApiKey(aviationstackKeyInput.trim());
+                    setAviationstackKeyInput('');
+                    setAviationstackKeyVisible(false);
+                  }}>
+                  Save Key
+                </Button>
+                {apiKeyStore.hasAviationstackKey && (
+                  <Button mode="text" onPress={async () => {
+                    await apiKeyStore.clearAviationstackApiKey();
+                    setAviationstackKeyInput('');
+                  }}>
                     Remove
                   </Button>
                 )}

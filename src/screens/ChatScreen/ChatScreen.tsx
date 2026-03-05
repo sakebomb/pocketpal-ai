@@ -13,7 +13,7 @@ import {PalSheet} from '../../components/PalsSheets';
 import {PromptPickerSheet} from '../../components/PromptPickerSheet';
 import {QuickGenSettingsSheet} from '../../components/QuickGenSettingsSheet';
 
-import {useChatSession} from '../../hooks';
+import {useChatSession, useTheme} from '../../hooks';
 import {usePendingMessage} from '../../hooks/useDeepLinking';
 import {Pal} from '../../types/pal';
 
@@ -47,6 +47,7 @@ const renderBubble = ({
 );
 
 export const ChatScreen: React.FC = observer(() => {
+  const theme = useTheme();
   const currentMessageInfo = useRef<{
     createdAt: number;
     id: string;
@@ -218,8 +219,8 @@ export const ChatScreen: React.FC = observer(() => {
             : null;
         const ratio = promptN && nCtx ? promptN / nCtx : 0;
         return ratio > 0.85 ? (
-          <View style={ctxWarningStyles.container}>
-            <Text style={ctxWarningStyles.text}>
+          <View style={[ctxWarningStyles.container, {backgroundColor: theme.colors.tertiaryContainer ?? 'rgba(200,140,0,0.12)'}]}>
+            <Text style={[ctxWarningStyles.text, {color: theme.colors.tertiary ?? theme.colors.onSurfaceVariant}]}>
               Context nearly full ({Math.round(ratio * 100)}%) — consider
               starting a new chat
             </Text>
@@ -227,9 +228,9 @@ export const ChatScreen: React.FC = observer(() => {
         ) : null;
       })()}
       {uiStore.activeToolCall && (
-        <View style={toolIndicatorStyles.container}>
-          <ActivityIndicator size="small" color="#888" />
-          <Text style={toolIndicatorStyles.text}>
+        <View style={[toolIndicatorStyles.container, {backgroundColor: theme.colors.surfaceVariant}]}>
+          <ActivityIndicator size="small" color={theme.colors.onSurfaceVariant} />
+          <Text style={[toolIndicatorStyles.text, {color: theme.colors.onSurfaceVariant}]}>
             Using {uiStore.activeToolCall}…
           </Text>
         </View>
@@ -279,11 +280,9 @@ const ctxWarningStyles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(200,140,0,0.12)',
   },
   text: {
     fontSize: 12,
-    color: '#9a6c00',
   },
 });
 
@@ -297,11 +296,9 @@ const toolIndicatorStyles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: 'rgba(128,128,128,0.12)',
     gap: 8,
   },
   text: {
     fontSize: 13,
-    color: '#666',
   },
 });

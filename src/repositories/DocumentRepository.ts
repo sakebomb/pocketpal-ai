@@ -23,6 +23,10 @@ class DocumentRepository {
    * Store a document and its chunks for a pal.
    */
   async addDocument(palId: string, name: string, text: string): Promise<void> {
+    const MAX_DOC_SIZE = 1_000_000; // 1MB
+    if (text.length > MAX_DOC_SIZE) {
+      throw new Error(`Document too large (${(text.length / 1_000_000).toFixed(1)}MB). Maximum is 1MB.`);
+    }
     const textChunks = chunkText(text);
     const now = Date.now();
 

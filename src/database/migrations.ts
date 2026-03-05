@@ -203,5 +203,15 @@ export default schemaMigrations({
         }),
       ],
     },
+    // Migration to version 12: Add quick_actions_json to local_pals
+    {
+      toVersion: 12,
+      steps: [
+        addColumns({
+          table: 'local_pals',
+          columns: [{name: 'quick_actions_json', type: 'string', isOptional: true}],
+        }),
+      ],
+    },
   ],
 });

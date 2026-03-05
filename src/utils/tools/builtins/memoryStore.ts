@@ -31,7 +31,15 @@ export function createMemoryStoreTool(palId: string): RegisteredTool {
       if (!content) {
         return JSON.stringify({error: 'content must not be empty'});
       }
+      if (content.length > 500) {
+        return JSON.stringify({error: 'Memory content too long (max 500 characters). Be more concise.'});
+      }
       try {
+        // Enforce per-pal memory limit
+        const existing = await memoryRepository.getMemoriesForPal(palId);
+        if (existing.length >= 100) {
+          return JSON.stringify({error: 'Memory limit reached (100). Remove old memories first.'});
+        }
         await memoryRepository.addMemory(palId, content);
         return JSON.stringify({success: true});
       } catch (e) {

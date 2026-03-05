@@ -183,6 +183,9 @@ class PalRepository {
               palData.rawPalshubGenerationSettings;
             record.generationSettings =
               LocalPal.safeStringify(generationSettings);
+            record.quickActionsJson = LocalPal.safeStringifyArray(
+              palData.quickActions || [],
+            );
           });
       });
 
@@ -285,6 +288,11 @@ class PalRepository {
             record.generationSettings = LocalPal.safeStringify(
               updates.completionSettings ||
                 updates.rawPalshubGenerationSettings,
+            );
+          }
+          if (updates.quickActions !== undefined) {
+            record.quickActionsJson = LocalPal.safeStringifyArray(
+              updates.quickActions,
             );
           }
         });

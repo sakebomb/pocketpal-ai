@@ -185,9 +185,15 @@ class ChatSessionStore {
           completionSettings,
           activePalId: session.activePalId,
           pinned: session.pinned ?? false,
-          activeForks: session.activeForks_json
-            ? JSON.parse(session.activeForks_json)
-            : {},
+          activeForks: (() => {
+            try {
+              return session.activeForks_json
+                ? JSON.parse(session.activeForks_json)
+                : {};
+            } catch {
+              return {};
+            }
+          })(),
           settingsSource: 'pal', // Default to pal settings for existing sessions
           messagesLoaded: false, // Mark as not loaded for lazy loading
         });
@@ -270,9 +276,13 @@ class ChatSessionStore {
 
       runInAction(() => {
         session.messages = messages;
-        session.activeForks = sessionData.session.activeForks_json
-          ? JSON.parse(sessionData.session.activeForks_json)
-          : {};
+        try {
+          session.activeForks = sessionData.session.activeForks_json
+            ? JSON.parse(sessionData.session.activeForks_json)
+            : {};
+        } catch {
+          session.activeForks = {};
+        }
         session.messagesLoaded = true;
       });
     } catch (error) {

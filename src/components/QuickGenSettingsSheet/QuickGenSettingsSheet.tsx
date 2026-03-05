@@ -7,6 +7,7 @@ import {
   Alert,
 } from 'react-native';
 import {Button, Text, TextInput} from 'react-native-paper';
+import {observer} from 'mobx-react-lite';
 
 import {Sheet} from '../Sheet/Sheet';
 import {InputSlider} from '../InputSlider';
@@ -23,7 +24,7 @@ interface QuickGenSettingsSheetProps {
   onClose: () => void;
 }
 
-export const QuickGenSettingsSheet: React.FC<QuickGenSettingsSheetProps> = ({
+export const QuickGenSettingsSheet: React.FC<QuickGenSettingsSheetProps> = observer(({
   isVisible,
   onClose,
 }) => {
@@ -254,7 +255,7 @@ export const QuickGenSettingsSheet: React.FC<QuickGenSettingsSheetProps> = ({
       </Sheet.ScrollView>
     </Sheet>
   );
-};
+});
 
 const styles = StyleSheet.create({
   content: {

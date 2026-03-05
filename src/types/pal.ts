@@ -2,6 +2,13 @@ import type {Model} from '../utils/types';
 
 export type ParameterType = 'text' | 'select' | 'datetime_tag';
 
+export interface QuickAction {
+  id: string;
+  label: string;
+  prompt: string;
+  enabled: boolean;
+}
+
 export interface ParameterDefinition {
   key: string;
   type: ParameterType;
@@ -17,10 +24,40 @@ export interface PalCapabilities {
   multimodal?: boolean; // Can process images + text
   realtime?: boolean; // Real-time processing
   audio?: boolean; // Audio processing
-  web?: boolean; // Web browsing
   code?: boolean; // Code execution
-  memory?: boolean; // Persistent memory
-  tools?: boolean; // Function calling
+  // ── Tool Use ──────────────────────────────────────────────────
+  tools?: boolean; // Master switch: enables function calling
+  // Free tools (no API key required)
+  weather?: boolean; // Weather via Open-Meteo
+  wikipedia?: boolean; // Wikipedia lookup
+  urlReader?: boolean; // Read a URL via Jina
+  currency?: boolean; // Currency conversion via frankfurter.app
+  unitConvert?: boolean; // Unit conversion (pure JS)
+  dictionary?: boolean; // English dictionary via dictionaryapi.dev
+  translate?: boolean; // Translation via MyMemory
+  hackerNews?: boolean; // Hacker News top stories
+  // Memory
+  memory?: boolean; // Persistent memory (per-Pal WatermelonDB)
+  // Live data
+  crypto?: boolean; // Crypto prices via CoinGecko
+  stocks?: boolean; // Stock prices via Yahoo Finance
+  sports?: boolean; // Sports scores via TheSportsDB
+  reddit?: boolean; // Reddit posts (public API)
+  flights?: boolean; // Flight status via AviationStack (API key)
+  // Reference
+  movies?: boolean; // Movie/TV info via OMDB (API key)
+  books?: boolean; // Book search via Open Library
+  arxiv?: boolean; // arXiv paper search
+  github?: boolean; // GitHub repo search
+  trivia?: boolean; // Trivia questions via Open Trivia DB
+  nutrition?: boolean; // Nutrition info via Open Food Facts
+  recipe?: boolean; // Recipe search via TheMealDB
+  // Utilities
+  worldClock?: boolean; // World clock (pure JS Intl)
+  // Web search (API key required)
+  web?: boolean; // Tavily web search
+  brave?: boolean; // Brave web search
+  serper?: boolean; // Serper Google search (API key)
 }
 
 /**
@@ -95,6 +132,12 @@ export interface Pal {
   parameters: Record<string, any>;
   /** Schema defining what parameters this pal accepts and is used to generate the dynamic form in the UI */
   parameterSchema: ParameterDefinition[];
+
+  // ============================================================================
+  // QUICK ACTIONS
+  // ============================================================================
+  /** Per-pal shortcut chips shown above chat input on new (0-message) sessions */
+  quickActions?: QuickAction[];
 
   // ============================================================================
   // GENERATION SETTINGS

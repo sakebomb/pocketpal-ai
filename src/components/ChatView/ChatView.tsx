@@ -67,6 +67,7 @@ import {
   ContentReportSheet,
   BranchNavigator,
 } from '..';
+import {QuickActionsBar} from '../QuickActionsBar';
 import {
   AlertIcon,
   CopyIcon,
@@ -220,10 +221,8 @@ export const ChatView = observer(
     const [inputText, setInputText] = React.useState('');
     const [inputImages, setInputImages] = React.useState<string[]>([]);
     const [isPickerVisible, setIsPickerVisible] = React.useState(false);
-    const [_selectedModel, setSelectedModel] = React.useState<string | null>(
-      null,
-    );
-    const [_selectedPal, setSelectedPal] = React.useState<string | undefined>();
+    const [, setSelectedModel] = React.useState<string | null>(null);
+    const [, setSelectedPal] = React.useState<string | undefined>();
 
     // Image viewer state
     const [isImageViewVisible, setIsImageViewVisible] = React.useState(false);
@@ -246,10 +245,7 @@ export const ChatView = observer(
     const {onLayout: onLayoutChatInput, size: chatInputHeight} =
       useComponentSize();
 
-    const bottomComponentHeight = React.useMemo(() => {
-      const height = chatInputHeight.height;
-      return height;
-    }, [chatInputHeight.height]);
+    const bottomComponentHeight = chatInputHeight.height;
 
     // ============ INITIAL INPUT TEXT HANDLING ============
     // Handle initial input text from deep linking
@@ -309,7 +305,7 @@ export const ChatView = observer(
             keyboardOffsetBottom.value = withTiming(
               isKeyboardMovingUp ? bottomOffset : 0,
               {
-                duration: 200, // bottomOffset ? 150 : 400,
+                duration: 200,
               },
             );
           }
@@ -374,6 +370,7 @@ export const ChatView = observer(
 
     // ============ SEARCH FILTERING ============
     const searchQuery = uiStore.chatSearchQuery;
+    const previousSessionId = usePrevious(chatSessionStore.activeSessionId);
 
     // On session change: save draft for previous session, restore for new session, clear search
     React.useEffect(() => {
@@ -410,7 +407,6 @@ export const ChatView = observer(
     });
 
     const previousChatMessages = usePrevious(chatMessages);
-    const previousSessionId = usePrevious(chatSessionStore.activeSessionId);
 
     // ============ DRAFT AUTOSAVE ============
     // Track latest inputText in a ref so the session-change effect can read it without a stale closure
@@ -822,9 +818,6 @@ export const ChatView = observer(
     // We use this to create a spacer at the bottom of the list to account for the keyboard height.
     // So we can move up/down when the keyboard is shown/hidden.
     const headerStyle = useAnimatedStyle(() => {
-      // only animate when not streaming
-      // if (isStreaming) return {height: 0};
-
       // Only lift when keyboard is actively moving
       const shouldLift = trackingKeyboardMovement.value;
       return {
@@ -880,10 +873,10 @@ export const ChatView = observer(
               ref={list}
               renderItem={renderMessage}
               maintainVisibleContentPosition={
-                isStreaming // || hasHiddenContentState
+                isStreaming
                   ? {
                       autoscrollToTopThreshold: 20,
-                      minIndexForVisible: 1, //isStreaming ? 1 : 0,
+                      minIndexForVisible: 1,
                     }
                   : undefined
               }
@@ -894,7 +887,6 @@ export const ChatView = observer(
               scrollToBottomAnimatedStyle,
               // eslint-disable-next-line react-native/no-inline-styles
               {
-                // position: 'absolute',
                 right: 8,
                 bottom:
                   bottomComponentHeight +
@@ -1000,6 +992,16 @@ export const ChatView = observer(
           <Reanimated.View style={styles.chatContainer}>
             {customContent}
             {renderChatList()}
+
+            {/* Quick Actions — show on new sessions when input is empty */}
+            {activePal &&
+              messages.length === 0 &&
+              inputText === '' && (
+                <QuickActionsBar
+                  quickActions={activePal.quickActions ?? []}
+                  onSelect={text => setInputText(text)}
+                />
+              )}
 
             {/* Chat input */}
             <Reanimated.View

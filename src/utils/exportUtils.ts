@@ -11,6 +11,15 @@ import {userId} from './chat';
 import {ensureLegacyStoragePermission} from './androidPermission';
 import {getAbsoluteThumbnailPath, isLocalThumbnailPath} from './imageUtils';
 import type {Pal} from '../types/pal';
+
+const safeJsonParse = (str: string, fallback: unknown = {}): unknown => {
+  try {
+    return JSON.parse(str);
+  } catch {
+    return fallback;
+  }
+};
+
 /**
  * Export a single chat session to a JSON file
  * @param sessionId The ID of the session to export
@@ -35,11 +44,11 @@ export const exportChatSession = async (sessionId: string): Promise<void> => {
         author: msg.author,
         text: msg.text,
         type: msg.type,
-        metadata: msg.metadata ? JSON.parse(msg.metadata) : {},
+        metadata: msg.metadata ? safeJsonParse(msg.metadata) : {},
         createdAt: msg.createdAt,
       })),
       completionSettings: completionSettings
-        ? JSON.parse(completionSettings.settings)
+        ? safeJsonParse(completionSettings.settings)
         : {},
       activePalId: session.activePalId,
     };
@@ -94,11 +103,11 @@ export const exportAllChatSessions = async (): Promise<void> => {
             author: msg.author,
             text: msg.text,
             type: msg.type,
-            metadata: msg.metadata ? JSON.parse(msg.metadata) : {},
+            metadata: msg.metadata ? safeJsonParse(msg.metadata) : {},
             createdAt: msg.createdAt,
           })),
           completionSettings: completionSettings
-            ? JSON.parse(completionSettings.settings)
+            ? safeJsonParse(completionSettings.settings)
             : {},
           activePalId: sessionInfo.activePalId,
         });

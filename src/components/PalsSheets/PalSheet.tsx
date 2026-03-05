@@ -6,7 +6,13 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import {View, TextInput as RNTextInput, StyleSheet, Text} from 'react-native';
+import {
+  View,
+  TextInput as RNTextInput,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+} from 'react-native';
 import {Switch} from 'react-native-paper';
 
 import {z} from 'zod';
@@ -26,12 +32,15 @@ import {SectionDivider} from './SectionDivider';
 import {ModelNotAvailable} from './ModelNotAvailable';
 import {SystemPromptSection} from './SystemPromptSection';
 import {DocumentsSection} from './DocumentsSection';
+import {ToolsPicker} from './ToolsPicker';
+import {QuickActionsSection} from './QuickActionsSection';
 import {DynamicParameterForm} from '../DynamicParameters';
 import {PalGenerationSettingsSheet} from '../PalGenerationSettingsSheet';
 
 import {palStore} from '../../store';
 
-import type {Pal, PalCapabilities} from '../../types/pal';
+import type {Pal, PalCapabilities, QuickAction} from '../../types/pal';
+import {TOOL_CATALOG} from '../../utils/tools/catalog';
 
 import {L10nContext} from '../../utils';
 
@@ -68,11 +77,24 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
       pal.capabilities || {},
     );
 
+    // Quick actions state — controlled separately from React Hook Form
+    const [quickActions, setQuickActions] = useState<QuickAction[]>(
+      pal.quickActions || [],
+    );
+
     const toggleCapability = useCallback(
       (key: keyof PalCapabilities) => {
         setCapabilities(prev => ({...prev, [key]: !prev[key]}));
       },
       [],
+    );
+
+    // Tools picker view state
+    const [showToolsPicker, setShowToolsPicker] = useState(false);
+
+    const enabledToolCount = useMemo(
+      () => TOOL_CATALOG.filter(t => !!capabilities[t.capabilityKey]).length,
+      [capabilities],
     );
 
     // Internal state for generation settings sheet
@@ -154,9 +176,10 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
       [methods],
     );
 
-    // Sync capabilities when pal changes
+    // Sync capabilities and quick actions when pal changes
     useEffect(() => {
       setCapabilities(pal.capabilities || {});
+      setQuickActions(pal.quickActions || []);
     }, [pal]);
 
     // Initialize form with pal data
@@ -269,6 +292,7 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
           parameterSchema: activeSchema,
           source: pal.source || 'local',
           capabilities,
+          quickActions,
           // Include (local) completion settings if they exist
           completionSettings: data.completionSettings,
         };
@@ -321,7 +345,16 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
             <Sheet.ScrollView
               bottomOffset={16}
               contentContainerStyle={styles.scrollviewContainer}>
-              <View style={styles.form}>
+              {showToolsPicker ? (
+                <View style={styles.form}>
+                  <ToolsPicker
+                    capabilities={capabilities}
+                    onToggle={toggleCapability}
+                    onBack={() => setShowToolsPicker(false)}
+                  />
+                </View>
+              ) : null}
+              <View style={showToolsPicker ? capabilityStyles.hidden : styles.form}>
                 <FormField
                   ref={ref => {
                     inputRefs.current.name = ref;
@@ -394,28 +427,46 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
                   parameterSchema={activeSchema}
                 />
 
-                <SectionDivider label="Capabilities" />
+                <SectionDivider label="Tools" />
                 <View style={capabilityStyles.section}>
                   <CapabilityRow
-                    label="Tool Use"
-                    description="Enables function calling (required for all tools below)"
+                    label="Enable Tool Use"
+                    description="Function calling + built-in tools. Requires a 3B+ model."
                     value={!!capabilities.tools}
                     onToggle={() => toggleCapability('tools')}
                   />
-                  <CapabilityRow
-                    label="Web Search"
-                    description="Search the web via Tavily (requires API key in Settings)"
-                    value={!!capabilities.web}
-                    onToggle={() => toggleCapability('web')}
+                  <TouchableOpacity
+                    style={capabilityStyles.navRow}
+                    onPress={() => setShowToolsPicker(true)}
                     disabled={!capabilities.tools}
-                  />
-                  <CapabilityRow
-                    label="Memory"
-                    description="Remember facts across conversations"
-                    value={!!capabilities.memory}
-                    onToggle={() => toggleCapability('memory')}
-                    disabled={!capabilities.tools}
-                  />
+                    activeOpacity={0.7}>
+                    <View style={capabilityStyles.rowText}>
+                      <Text
+                        style={[
+                          capabilityStyles.label,
+                          !capabilities.tools && capabilityStyles.dimmed,
+                        ]}>
+                        Configure Tools
+                      </Text>
+                      <Text
+                        style={[
+                          capabilityStyles.description,
+                          {color: theme.colors.onSurfaceVariant},
+                          !capabilities.tools && capabilityStyles.dimmed,
+                        ]}>
+                        {enabledToolCount} tool
+                        {enabledToolCount !== 1 ? 's' : ''} enabled
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        capabilityStyles.chevron,
+                        {color: theme.colors.onSurfaceVariant},
+                        !capabilities.tools && capabilityStyles.dimmed,
+                      ]}>
+                      ›
+                    </Text>
+                  </TouchableOpacity>
                 </View>
 
                 {pal.id && (
@@ -424,6 +475,12 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
                     <DocumentsSection palId={pal.id} />
                   </>
                 )}
+
+                <SectionDivider label="Quick Actions" />
+                <QuickActionsSection
+                  quickActions={quickActions}
+                  onChange={setQuickActions}
+                />
 
                 <ColorSection />
 
@@ -497,7 +554,9 @@ const CapabilityRow: React.FC<CapabilityRowProps> = ({
   value,
   onToggle,
   disabled,
-}) => (
+}) => {
+  const rowTheme = useTheme();
+  return (
   <View style={capabilityStyles.row}>
     <View style={capabilityStyles.rowText}>
       <Text
@@ -507,6 +566,7 @@ const CapabilityRow: React.FC<CapabilityRowProps> = ({
       <Text
         style={[
           capabilityStyles.description,
+          {color: rowTheme.colors.onSurfaceVariant},
           disabled && capabilityStyles.dimmed,
         ]}>
         {description}
@@ -518,9 +578,13 @@ const CapabilityRow: React.FC<CapabilityRowProps> = ({
       disabled={disabled}
     />
   </View>
-);
+  );
+};
 
 const capabilityStyles = StyleSheet.create({
+  hidden: {
+    display: 'none',
+  },
   section: {
     paddingHorizontal: 4,
     gap: 4,
@@ -530,6 +594,12 @@ const capabilityStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 8,
+  },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
   },
   rowText: {
     flex: 1,
@@ -541,8 +611,11 @@ const capabilityStyles = StyleSheet.create({
   },
   description: {
     fontSize: 12,
-    color: '#888',
     marginTop: 2,
+  },
+  chevron: {
+    fontSize: 22,
+    fontWeight: '300',
   },
   dimmed: {
     opacity: 0.4,

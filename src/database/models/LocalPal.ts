@@ -1,6 +1,6 @@
 import {Model} from '@nozbe/watermelondb';
 import {field, readonly, date} from '@nozbe/watermelondb/decorators';
-import type {Pal, PalCapabilities, ParameterDefinition} from '../../types/pal';
+import type {Pal, PalCapabilities, ParameterDefinition, QuickAction} from '../../types/pal';
 import type {Model as LlamaModel} from '../../utils/types';
 import {CompletionParams} from '../../utils/completionTypes';
 
@@ -32,6 +32,7 @@ export default class LocalPal extends Model {
   @field('price_cents') priceCents?: number;
   @field('is_owned') isOwned?: boolean;
   @field('generation_settings') generationSettings?: string; // JSON stringified
+  @field('quick_actions_json') quickActionsJson?: string; // JSON stringified QuickAction[]
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;
 
@@ -110,6 +111,14 @@ export default class LocalPal extends Model {
     }
   }
 
+  get quickActionsArray(): QuickAction[] {
+    try {
+      return JSON.parse(this.quickActionsJson || '[]');
+    } catch {
+      return [];
+    }
+  }
+
   get generationSettingsObject(): Record<string, unknown> | undefined {
     try {
       return this.generationSettings
@@ -179,6 +188,7 @@ export default class LocalPal extends Model {
       is_owned: this.isOwned,
       rawPalshubGenerationSettings: this.generationSettingsObject,
       completionSettings: this.completionSettingsObject,
+      quickActions: this.quickActionsArray,
       created_at: this.createdAt.toISOString(),
       updated_at: this.updatedAt.toISOString(),
     };

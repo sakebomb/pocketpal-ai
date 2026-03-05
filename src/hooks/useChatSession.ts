@@ -424,42 +424,61 @@ export const useChatSession = (
 
         hasExecutedAnyTool = true;
 
+        // Sanitize tool_calls: llama.cpp requires id to be a string, but some
+        // models (e.g. Qwen2.5) don't emit IDs and the native bridge returns null.
+        const sanitizedToolCalls = result.tool_calls.map(
+          (tc: any, idx: number) => ({
+            ...tc,
+            id: tc.id != null ? tc.id : `call_${idx}`,
+          }),
+        );
+
         // Append the assistant's tool-call turn to the message list
         loopMessages = [
           ...loopMessages,
           {
             role: 'assistant' as const,
             content: result.text ?? '',
-            tool_calls: result.tool_calls,
+            tool_calls: sanitizedToolCalls,
           },
         ];
 
         // Execute each requested tool and append results
-        for (const toolCall of result.tool_calls) {
+        const MAX_TOOL_ARGS_LENGTH = 10000;
+        for (const toolCall of sanitizedToolCalls) {
           const toolName: string = toolCall.function?.name ?? 'unknown';
           uiStore.setActiveToolCall(toolName);
 
           let toolResultContent: string;
           try {
-            const args = JSON.parse(toolCall.function?.arguments ?? '{}');
+            // Validate tool name against registered handlers
             const handler = toolHandlers[toolName];
-            if (handler) {
-              toolResultContent = await handler(args);
-            } else {
+            if (!handler) {
               toolResultContent = JSON.stringify({
                 error: `Unknown tool: ${toolName}`,
               });
+            } else {
+              const rawArgs = toolCall.function?.arguments ?? '{}';
+              if (rawArgs.length > MAX_TOOL_ARGS_LENGTH) {
+                toolResultContent = JSON.stringify({
+                  error: 'Tool arguments too large.',
+                });
+              } else {
+                const args = JSON.parse(rawArgs);
+                toolResultContent = await handler(args);
+              }
             }
           } catch (e) {
             toolResultContent = JSON.stringify({error: String(e)});
           }
 
+          // Wrap tool results in delimiters to reduce prompt injection surface
           loopMessages = [
             ...loopMessages,
             {
               role: 'tool' as const,
               tool_call_id: toolCall.id,
-              content: toolResultContent,
+              content: `<tool_result name="${toolName}">\n${toolResultContent}\n</tool_result>`,
             },
           ];
         }
@@ -606,7 +625,8 @@ export const useChatSession = (
         }
       }
 
-      const errorMessage = (error as Error).message;
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('network')) {
         // TODO: This can be removed. We don't use network for chat.
         await addSystemMessage(l10n.common.networkError);

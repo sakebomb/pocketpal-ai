@@ -4,13 +4,13 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Alert,
   TextInput,
 } from 'react-native';
 import {Button} from 'react-native-paper';
 
 import {Sheet} from '..';
+import {useTheme} from '../../hooks';
 import type {PromptInfo} from '../../repositories/PromptRepository';
 import {promptRepository} from '../../repositories/PromptRepository';
 
@@ -25,6 +25,7 @@ export const PromptPickerSheet: React.FC<PromptPickerSheetProps> = ({
   onClose,
   onSelect,
 }) => {
+  const theme = useTheme();
   const [prompts, setPrompts] = useState<PromptInfo[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -82,6 +83,8 @@ export const PromptPickerSheet: React.FC<PromptPickerSheetProps> = ({
       setNewContent('');
       setShowAddForm(false);
       await loadPrompts();
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save prompt. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -102,22 +105,22 @@ export const PromptPickerSheet: React.FC<PromptPickerSheetProps> = ({
       <Sheet.ScrollView bottomOffset={16}>
         {showAddForm ? (
           <View style={styles.addForm}>
-            <Text style={styles.fieldLabel}>Title</Text>
+            <Text style={[styles.fieldLabel, {color: theme.colors.onSurfaceVariant}]}>Title</Text>
             <TextInput
-              style={styles.textInput}
+              style={[styles.textInput, {color: theme.colors.onSurface, borderColor: theme.colors.outline, backgroundColor: theme.colors.surface}]}
               value={newTitle}
               onChangeText={setNewTitle}
               placeholder="e.g. Explain like I'm five"
-              placeholderTextColor="#aaa"
+              placeholderTextColor={theme.colors.onSurfaceVariant}
               autoFocus
             />
-            <Text style={styles.fieldLabel}>Prompt text</Text>
+            <Text style={[styles.fieldLabel, {color: theme.colors.onSurfaceVariant}]}>Prompt text</Text>
             <TextInput
-              style={[styles.textInput, styles.contentInput]}
+              style={[styles.textInput, styles.contentInput, {color: theme.colors.onSurface, borderColor: theme.colors.outline, backgroundColor: theme.colors.surface}]}
               value={newContent}
               onChangeText={setNewContent}
               placeholder="Enter the full prompt text…"
-              placeholderTextColor="#aaa"
+              placeholderTextColor={theme.colors.onSurfaceVariant}
               multiline
               textAlignVertical="top"
             />
@@ -153,21 +156,21 @@ export const PromptPickerSheet: React.FC<PromptPickerSheetProps> = ({
             </Button>
 
             {prompts.length === 0 ? (
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyText, {color: theme.colors.onSurfaceVariant}]}>
                 No saved prompts yet. Tap "New Prompt" to add one.
               </Text>
             ) : (
               prompts.map(prompt => (
                 <TouchableOpacity
                   key={prompt.id}
-                  style={styles.promptCard}
+                  style={[styles.promptCard, {backgroundColor: theme.colors.surfaceVariant}]}
                   onPress={() => handleSelect(prompt)}
                   activeOpacity={0.7}>
                   <View style={styles.promptCardContent}>
-                    <Text style={styles.promptTitle} numberOfLines={1}>
+                    <Text style={[styles.promptTitle, {color: theme.colors.onSurface}]} numberOfLines={1}>
                       {prompt.title}
                     </Text>
-                    <Text style={styles.promptSnippet} numberOfLines={2}>
+                    <Text style={[styles.promptSnippet, {color: theme.colors.onSurfaceVariant}]} numberOfLines={2}>
                       {prompt.content}
                     </Text>
                   </View>
@@ -175,7 +178,7 @@ export const PromptPickerSheet: React.FC<PromptPickerSheetProps> = ({
                     onPress={() => handleDelete(prompt)}
                     hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
                     style={styles.deleteBtn}>
-                    <Text style={styles.deleteBtnText}>✕</Text>
+                    <Text style={[styles.deleteBtnText, {color: theme.colors.onSurfaceVariant}]}>✕</Text>
                   </TouchableOpacity>
                 </TouchableOpacity>
               ))
@@ -199,14 +202,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
-    color: '#999',
     fontSize: 14,
     marginTop: 24,
   },
   promptCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
     borderRadius: 8,
     padding: 12,
     gap: 8,
@@ -217,12 +218,10 @@ const styles = StyleSheet.create({
   promptTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#222',
     marginBottom: 2,
   },
   promptSnippet: {
     fontSize: 12,
-    color: '#666',
     lineHeight: 17,
   },
   deleteBtn: {
@@ -230,7 +229,6 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: {
     fontSize: 14,
-    color: '#bbb',
   },
   addForm: {
     paddingHorizontal: 16,
@@ -241,18 +239,14 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#555',
     marginBottom: 2,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#222',
-    backgroundColor: '#fafafa',
   },
   contentInput: {
     height: 140,
