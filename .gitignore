@@ -85,6 +85,10 @@ ios/Config/Env.xcconfig
 # Android native libraries (should not be committed)
 **/libggml-htp*.so
 
+# Local task/memory tracking
+memory/
+tasks/
+
 # E2E debug output
 e2e/debug-output/
 e2e/device-farm-artifacts/
